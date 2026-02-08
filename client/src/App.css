@@ -1,0 +1,171 @@
+/* client/src/App.css */
+
+/* 1. นำเข้า Font สวยๆ */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
+
+:root {
+  --primary-color: #3b82f6;
+  --secondary-color: #64748b;
+  --success-color: #22c55e;
+  --bg-color: #f3f4f6;
+  --card-bg: #ffffff;
+}
+
+/* จัดการ Body และ Root ให้เต็มจอและจัดกึ่งกลาง */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Kanit', sans-serif;
+  background-color: var(--bg-color);
+  color: #1f2937;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;       /* ใช้ Flexbox จัดกึ่งกลาง */
+  justify-content: center; /* จัดแนวนอนกึ่งกลาง */
+  width: 100%;
+}
+
+#root {
+  width: 100%;        /* ให้ root กว้างเต็มพื้นที่ */
+  max-width: 1200px;  /* แต่ไม่เกิน 1200px (จะได้ไม่กว้างเกินไปบนจอใหญ่) */
+  margin: 0 auto;     /* จัดกึ่งกลางซ้ำอีกทีเพื่อความชัวร์ */
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* --- Container (สำหรับหน้า Dashboard/Form) --- */
+.container {
+  width: 100%;
+  margin: 0 auto;     /* จัดกึ่งกลาง */
+}
+
+/* --- Card Styles --- */
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* เงานุ่มขึ้น */
+  padding: 30px;
+  margin-bottom: 20px;
+  width: 100%;        /* ให้การ์ดกว้างเต็ม container */
+  box-sizing: border-box;
+}
+
+/* จัดหัวข้อให้กึ่งกลาง (ถ้าต้องการ) */
+h2 {
+  text-align: center; /* จัดข้อความหัวข้อกึ่งกลาง */
+  color: #111827;
+  font-weight: 600;
+  margin-bottom: 25px;
+}
+
+/* --- Form Styles --- */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: 'Kanit', sans-serif;
+  box-sizing: border-box;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* --- Button Styles --- */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Kanit', sans-serif;
+}
+
+.btn:hover {
+  filter: brightness(0.95); /* เอฟเฟกต์ตอนเอาเมาส์ชี้ */
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.btn-add {
+  background-color: var(--primary-color);
+  color: white;
+  /* จัดปุ่มให้ดูเด่น */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* --- Table Styles --- */
+.custom-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* จัดหัวตารางกึ่งกลาง */
+.custom-table th {
+  background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  text-align: center; /* จัดกึ่งกลาง */
+  padding: 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* จัดข้อมูลในตารางกึ่งกลาง (ยกเว้นบางช่องที่อยากให้ชิดซ้าย) */
+.custom-table td {
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: white;
+  text-align: center; /* จัดกึ่งกลาง */
+  vertical-align: middle;
+}
+
+/* --- Status Badges --- */
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.status-pending { background-color: #fef3c7; color: #d97706; }
+.status-doing { background-color: #dbeafe; color: #2563eb; }
+.status-done { background-color: #dcfce7; color: #16a34a; }
+
+/* จัด Wrapper ของหน้า Login ให้กึ่งกลางจอเสมอ */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh; /* ความสูงเกือบเต็มจอ */
+  width: 100%;
+}
