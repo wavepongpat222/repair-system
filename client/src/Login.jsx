@@ -21,7 +21,7 @@ function Login() {
                     if (role === 'admin') {
                         navigate('/admin-dashboard'); // Admin ไปหน้าจัดการ User
                     } else if (role === 'user') {
-                        navigate('/user-dashboard');
+                        navigate('/create');
                     } else if (role === 'inventory') {
                         navigate('/inventory-dashboard');
                     } else {

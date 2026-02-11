@@ -79,7 +79,7 @@ function MaterialApprovals() {
                 <h2>
                     {currentUser?.role === 'inventory' ? '📦 รายการรอจ่ายวัสดุ (ผ่านการอนุมัติแล้ว)' : '📋 รายการรอตรวจสอบ (Supervisor)'}
                 </h2>
-                <button className="btn btn-secondary" onClick={handleBack}>🔙 กลับหน้าหลัก</button>
+                
             </div>
 
             <div className="card" style={{padding: '0', overflow: 'hidden'}}>

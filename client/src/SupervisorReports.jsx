@@ -61,7 +61,6 @@ function SupervisorReports() {
                         onChange={e => setFilterMonth(e.target.value)}
                         style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc'}}
                     />
-                    <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>🔙 กลับ</button>
                     <button className="btn btn-primary" onClick={handlePrint}>🖨️ พิมพ์รายงาน</button>
                 </div>
             </div>

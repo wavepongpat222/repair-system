@@ -1,131 +1,94 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './App.css';
 
 function UserDashboard() {
-    const [myRepairs, setMyRepairs] = useState([]);
+    const [deviceName, setDeviceName] = useState('');
+    const [problemDetail, setProblemDetail] = useState('');
+    const [location, setLocation] = useState('');
+    const [image, setImage] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
 
-    // Pagination
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
-
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || user.role !== 'user') { // ถ้าไม่ใช่ user ให้ดีดออก
-            navigate('/'); 
-            return;
-        }
-        setCurrentUser(user);
-        fetchMyRepairs(user.user_id);
+        if (!user) { navigate('/'); } 
+        else { setCurrentUser(user); }
     }, []);
 
-    const fetchMyRepairs = (userId) => {
-        axios.get('http://localhost:3001/repairs')
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (deviceName === "") { alert("กรุณาเลือกชื่ออุปกรณ์"); return; }
+        if (location === "") { alert("กรุณาเลือกสถานที่"); return; }
+
+        const formData = new FormData();
+        formData.append('user_id', currentUser.user_id);
+        formData.append('device_name', deviceName);
+        formData.append('problem_detail', problemDetail);
+        formData.append('location', location);
+        if (image) formData.append('repair_image', image);
+
+        axios.post('http://localhost:3001/add-repair', formData)
             .then(res => {
-                // กรองเอาเฉพาะงานของตัวเองทันที
-                const myJobs = res.data.filter(item => item.reporter_id === userId);
-                setMyRepairs(myJobs);
+                if(res.data === "Success") {
+                    alert("บันทึกข้อมูลเรียบร้อย ✅");
+                    // เมื่อแจ้งซ่อมเสร็จ ให้เด้งไปหน้าประวัติทันที
+                    navigate('/history'); 
+                } else {
+                    alert("เกิดข้อผิดพลาด");
+                }
             })
             .catch(err => console.log(err));
     }
 
-    const handleCancel = (repair_id) => {
-        if(!window.confirm("ต้องการยกเลิกการแจ้งซ่อมนี้ใช่ไหม?")) return;
-        axios.delete('http://localhost:3001/cancel-repair', { 
-            data: { repair_id: repair_id, user_id: currentUser.user_id } 
-        }).then(res => { 
-             if(res.data==="Success") { alert("ยกเลิกเรียบร้อย"); fetchMyRepairs(currentUser.user_id); }
-             else alert("ไม่สามารถยกเลิกได้"); 
-        });
-    }
-
-    const handleLogout = () => { localStorage.removeItem('user'); navigate('/'); }
-
-    // Logic Pagination
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = myRepairs.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(myRepairs.length / itemsPerPage);
-    const goToPrev = () => setCurrentPage(p => Math.max(p - 1, 1));
-    const goToNext = () => setCurrentPage(p => Math.min(p + 1, totalPages));
-
-    const getStatusClass = (s) => s==='done'?'status-badge status-done':s==='doing'?'status-badge status-doing':'status-badge status-pending';
-    const getStatusText = (s) => s==='pending'?'รอดำเนินการ':s==='doing'?'กำลังซ่อม':'เสร็จสิ้น';
-
     return (
-        <div className="container">
-            <div style={{ textAlign: 'right', marginBottom: '10px', color: '#666', fontSize: '0.9rem' }}>
-                👋 สวัสดี, <b>{currentUser?.first_name}</b> (ผู้ใช้งานทั่วไป) 
-                | <span style={{color: 'blue', cursor: 'pointer', textDecoration: 'underline'}} onClick={() => navigate('/change-password')}>เปลี่ยนรหัสผ่าน</span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2>📋 ประวัติการแจ้งซ่อมของฉัน</h2>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <Link to="/create"><button className="btn btn-primary">+ แจ้งซ่อมใหม่</button></Link>
-                    <button className="btn" onClick={handleLogout} style={{ backgroundColor: '#ef4444', color: 'white' }}>ออกจากระบบ</button>
+        <div className="page-background">
+            <div className="form-card-container" style={{marginTop:'30px'}}>
+                <div className="form-header">
+                    <h3>🔧 แจ้งซ่อมอุปกรณ์ใหม่</h3>
                 </div>
-            </div>
-
-            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
-                <table className="custom-table">
-                    <thead>
-                        <tr>
-                            <th style={{ width: '50px', textAlign: 'center' }}>ลำดับ</th>
-                            <th>รูปภาพ</th>
-                            <th>อุปกรณ์</th>
-                            <th>อาการเสีย</th>
-                            <th>สถานที่</th>
-                            <th style={{ textAlign: 'center' }}>สถานะ</th>
-                            <th style={{ textAlign: 'center' }}>จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {currentItems.length > 0 ? (
-                            currentItems.map((item, index) => (
-                                <tr key={item.id}>
-                                    <td style={{ textAlign: 'center' }}><b>{indexOfFirstItem + index + 1}</b></td>
-                                    <td>
-                                        {item.repair_image ? (
-                                            <a href={`http://localhost:3001/uploads/${item.repair_image}`} target="_blank" rel="noreferrer">
-                                                <img src={`http://localhost:3001/uploads/${item.repair_image}`} alt="img" style={{width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px'}} />
-                                            </a>
-                                        ) : '-'}
-                                    </td>
-                                    <td style={{ fontWeight: '500' }}>{item.device_name}</td>
-                                    <td>{item.problem_detail}</td>
-                                    <td>{item.location}</td>
-                                    
-                                    <td style={{ textAlign: 'center' }}>
-                                        <span className={getStatusClass(item.status)}>
-                                            {getStatusText(item.status)}
-                                        </span>
-                                    </td>
-                                    
-                                    <td style={{ textAlign: 'center' }}>
-                                        {item.status === 'pending' && (
-                                            <button onClick={() => handleCancel(item.id)} style={{backgroundColor: '#fb923c', color: 'white', border: 'none', borderRadius: '4px', padding: '5px 10px', cursor: 'pointer', fontSize: '0.85rem'}}>ยกเลิก</button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>คุณยังไม่เคยแจ้งซ่อม</td></tr>
-                        )}
-                    </tbody>
-                </table>
-
-                {/* Pagination */}
-                {myRepairs.length > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '15px', gap: '10px', borderTop: '1px solid #eee' }}>
-                        <button onClick={goToPrev} disabled={currentPage === 1} className="btn btn-secondary">◀</button>
-                        <span>หน้า {currentPage} / {totalPages}</span>
-                        <button onClick={goToNext} disabled={currentPage === totalPages} className="btn btn-secondary">▶</button>
+                <form onSubmit={handleSubmit} className="modern-form">
+                    <div className="form-group-modern">
+                        <label>ชื่ออุปกรณ์ / ประเภท</label>
+                        <select className="input-modern" value={deviceName} onChange={e => setDeviceName(e.target.value)} required>
+                            <option value="">-- กรุณาเลือกรายการ --</option>
+                            <option value="Computer PC">คอมพิวเตอร์ตั้งโต๊ะ (PC)</option>
+                            <option value="Notebook">โน้ตบุ๊ก (Notebook)</option>
+                            <option value="Printer">เครื่องพิมพ์ (Printer/Scanner)</option>
+                            <option value="Network/WiFi">อินเทอร์เน็ต / WiFi</option>
+                            <option value="Software/Program">โปรแกรม / ซอฟต์แวร์</option>
+                            <option value="Monitor">หน้าจอ (Monitor)</option>
+                            <option value="UPS">เครื่องสำรองไฟ (UPS)</option>
+                            <option value="Other">อื่นๆ</option>
+                        </select>
                     </div>
-                )}
+                    <div className="form-group-modern">
+                        <label>สถานที่ / แผนก</label>
+                        <select className="input-modern" value={location} onChange={e => setLocation(e.target.value)} required>
+                            <option value="">-- กรุณาเลือกสถานที่ --</option>
+                            <option value="อาคารสำนักงาน - ชั้น 1">อาคารสำนักงาน - ชั้น 1</option>
+                            <option value="อาคารสำนักงาน - ชั้น 2">อาคารสำนักงาน - ชั้น 2</option>
+                            <option value="แผนกบัญชี/การเงิน">แผนกบัญชี/การเงิน</option>
+                            <option value="แผนกบุคคล (HR)">แผนกบุคคล (HR)</option>
+                            <option value="ฝ่ายผลิต (Production)">ฝ่ายผลิต (Production)</option>
+                            <option value="คลังสินค้า (Warehouse)">คลังสินค้า (Warehouse)</option>
+                            <option value="ห้อง Server / IT">ห้อง Server / IT</option>
+                            <option value="ป้อมรปภ.">ป้อมรปภ.</option>
+                        </select>
+                    </div>
+                    <div className="form-group-modern">
+                        <label>รายละเอียดปัญหา</label>
+                        <textarea className="input-modern" rows="4" placeholder="อาการเป็นอย่างไร..." value={problemDetail} onChange={e => setProblemDetail(e.target.value)} required></textarea>
+                    </div>
+                    <div className="form-group-modern">
+                        <label>รูปภาพประกอบ (ถ้ามี)</label>
+                        <div className="file-input-wrapper">
+                            <input type="file" id="fileInput" className="input-file-modern" onChange={e => setImage(e.target.files[0])} />
+                        </div>
+                    </div>
+                    <button type="submit" className="btn-submit-modern">ส่งแจ้งซ่อม</button>
+                </form>
             </div>
         </div>
     );

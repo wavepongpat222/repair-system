@@ -1,93 +1,231 @@
 /* client/src/App.css */
 
-/* 1. นำเข้า Font สวยๆ */
-@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
+/* 1. นำเข้า Font */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Sarabun:wght@300;400;500;600&display=swap');
 
 :root {
-  --primary-color: #3b82f6;
-  --secondary-color: #64748b;
-  --success-color: #22c55e;
-  --bg-color: #f3f4f6;
-  --card-bg: #ffffff;
+  --primary-color: #3b82f6;       /* สีฟ้าหลัก */
+  --primary-hover: #2563eb;       /* สีฟ้าเข้ม (ตอนชี้) */
+  --secondary-color: #64748b;     /* สีเทา */
+  --success-color: #22c55e;       /* สีเขียว */
+  --danger-color: #ef4444;        /* สีแดง */
+  --bg-color: #f3f4f6;            /* สีพื้นหลังเว็บ */
+  --card-bg: #ffffff;             /* สีพื้นหลังการ์ด */
+  --text-color: #1f2937;          /* สีตัวหนังสือ */
+  --border-color: #e5e7eb;        /* สีเส้นขอบ */
 }
 
-/* จัดการ Body และ Root ให้เต็มจอและจัดกึ่งกลาง */
+/* --- Global Styles --- */
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Kanit', sans-serif;
+  font-family: 'Sarabun', 'Kanit', sans-serif; /* ใช้ Sarabun เป็นหลักเพื่อความอ่านง่าย */
   background-color: var(--bg-color);
-  color: #1f2937;
+  color: var(--text-color);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
-  display: flex;       /* ใช้ Flexbox จัดกึ่งกลาง */
-  justify-content: center; /* จัดแนวนอนกึ่งกลาง */
-  width: 100%;
+  /* ⚠️ แก้ไข: เอา flex center ออก เพื่อให้ Navbar อยู่บนสุดได้ */
+  display: block; 
 }
 
 #root {
-  width: 100%;        /* ให้ root กว้างเต็มพื้นที่ */
-  max-width: 1200px;  /* แต่ไม่เกิน 1200px (จะได้ไม่กว้างเกินไปบนจอใหญ่) */
-  margin: 0 auto;     /* จัดกึ่งกลางซ้ำอีกทีเพื่อความชัวร์ */
-  padding: 20px;
+  width: 100%;
+  /* ⚠️ แก้ไข: เอา max-width/margin ออกจาก root เพื่อให้ Navbar เต็มจอ */
+}
+
+/* --- Navbar Styles (ส่วนใหม่) --- */
+.navbar-modern {
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 0.8rem 0;
+  position: sticky; /* ให้ติดอยู่บนสุด */
+  top: 0;
+  z-index: 1000;
+  margin-bottom: 20px;
+}
+
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.navbar-brand-modern {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e1b4b; /* สีกรมท่าเข้ม */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 15px;
+}
+
+.nav-item {
+  text-decoration: none;
+  color: #4b5563;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+
+.nav-item:hover, .nav-item.active {
+  background-color: #eff6ff;
+  color: var(--primary-color);
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-greeting {
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.btn-logout-modern {
+  background-color: var(--danger-color);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-logout-modern:hover {
+  background-color: #dc2626;
+}
+
+/* --- Page Layout Containers --- */
+.page-background {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 40px;
+  min-height: calc(100vh - 80px); /* ความสูงหัก Navbar */
+}
+
+.container {
+  max-width: 1200px; /* จำกัดความกว้างเนื้อหา */
+  margin: 0 auto;
+  padding: 0 20px;
+  width: 100%;
   box-sizing: border-box;
 }
 
-/* --- Container (สำหรับหน้า Dashboard/Form) --- */
-.container {
+/* --- Card Styles (Modern) --- */
+.form-card-container {
+  background-color: white;
   width: 100%;
-  margin: 0 auto;     /* จัดกึ่งกลาง */
+  max-width: 800px; /* ความกว้างของการ์ดฟอร์ม */
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* เงานุ่มสวย */
+  padding: 40px;
+  margin-bottom: 30px;
+  box-sizing: border-box;
 }
 
-/* --- Card Styles --- */
+/* Card แบบเดิม (เผื่อใช้หน้าอื่น) */
 .card {
   background: var(--card-bg);
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* เงานุ่มขึ้น */
-  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 25px;
   margin-bottom: 20px;
-  width: 100%;        /* ให้การ์ดกว้างเต็ม container */
+  width: 100%;
   box-sizing: border-box;
 }
 
-/* จัดหัวข้อให้กึ่งกลาง (ถ้าต้องการ) */
+.form-header h3 {
+  margin-top: 0;
+  color: #1e1b4b;
+  font-size: 1.5rem;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #f3f4f6;
+  padding-bottom: 15px;
+}
+
 h2 {
-  text-align: center; /* จัดข้อความหัวข้อกึ่งกลาง */
+  text-align: center;
   color: #111827;
   font-weight: 600;
   margin-bottom: 25px;
 }
 
-/* --- Form Styles --- */
-.form-group {
-  margin-bottom: 1.5rem;
+h3 {
+  color: #1f2937;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+/* --- Form Elements (Modern) --- */
+.form-group, .form-group-modern {
+  margin-bottom: 20px;
 }
 
 label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
+  margin-bottom: 8px;
+  font-weight: 600;
   color: #374151;
+  font-size: 0.95rem;
 }
 
-input, textarea, select {
+/* ปรับ Input ทุกประเภทให้สวยขึ้น */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+select,
+textarea,
+.input-modern {
   width: 100%;
-  padding: 12px;
+  padding: 12px 15px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 1rem;
-  font-family: 'Kanit', sans-serif;
+  font-family: 'Sarabun', sans-serif;
+  background-color: #f9fafb;
   box-sizing: border-box;
+  transition: all 0.2s;
 }
 
-input:focus, textarea:focus {
+input:focus, select:focus, textarea:focus, .input-modern:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* File Input Style */
+.file-input-wrapper {
+  background-color: #f9fafb;
+  border: 1px dashed #d1d5db;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+.input-file-modern {
+  width: 100%;
+  font-size: 0.9rem;
 }
 
 /* --- Button Styles --- */
-.btn {
+.btn, .btn-primary, .btn-secondary, .btn-submit-modern {
   padding: 10px 20px;
   border: none;
   border-radius: 8px;
@@ -95,31 +233,34 @@ input:focus, textarea:focus {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: 'Kanit', sans-serif;
+  font-family: 'Sarabun', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.btn:hover {
-  filter: brightness(0.95); /* เอฟเฟกต์ตอนเอาเมาส์ชี้ */
-}
-
-.btn-primary {
+.btn-primary, .btn-submit-modern {
   background-color: var(--primary-color);
   color: white;
+  width: 100%; /* ปุ่ม Submit เต็มจอ */
+}
+
+.btn-primary:hover, .btn-submit-modern:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
   background-color: var(--secondary-color);
   color: white;
 }
+.btn-secondary:hover { background-color: #475569; }
 
-.btn-add {
-  background-color: var(--primary-color);
-  color: white;
-  /* จัดปุ่มให้ดูเด่น */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+/* ปุ่มในตาราง หรือปุ่มเล็ก */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.85rem;
 }
 
 /* --- Table Styles --- */
@@ -127,45 +268,262 @@ input:focus, textarea:focus {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-}
-
-/* จัดหัวตารางกึ่งกลาง */
-.custom-table th {
-  background-color: #f8fafc;
-  color: #64748b;
-  font-weight: 600;
-  text-align: center; /* จัดกึ่งกลาง */
-  padding: 16px;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-/* จัดข้อมูลในตารางกึ่งกลาง (ยกเว้นบางช่องที่อยากให้ชิดซ้าย) */
-.custom-table td {
-  padding: 16px;
-  border-bottom: 1px solid #e2e8f0;
   background: white;
-  text-align: center; /* จัดกึ่งกลาง */
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.custom-table th {
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.95rem;
+}
+
+.custom-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: #334155;
   vertical-align: middle;
+}
+
+.custom-table tr:last-child td {
+  border-bottom: none;
+}
+
+.custom-table tr:hover {
+  background-color: #f8fafc;
 }
 
 /* --- Status Badges --- */
 .status-badge {
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
   display: inline-block;
 }
 
-.status-pending { background-color: #fef3c7; color: #d97706; }
-.status-doing { background-color: #dbeafe; color: #2563eb; }
-.status-done { background-color: #dcfce7; color: #16a34a; }
+.status-pending { background-color: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; } /* รอรับเรื่อง (ส้ม) */
+.status-doing { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }   /* กำลังซ่อม (ฟ้า) */
+.status-done { background-color: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }    /* เสร็จสิ้น (เขียว) */
 
-/* จัด Wrapper ของหน้า Login ให้กึ่งกลางจอเสมอ */
+/* --- Footer --- */
+.simple-footer {
+  width: 100%;
+  text-align: center;
+  padding: 30px 0;
+  color: #9ca3af;
+  font-size: 0.85rem;
+  margin-top: auto;
+}
+
+.footer-links span {
+  margin: 0 8px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.footer-links span:hover {
+  color: var(--primary-color);
+}
+
+/* --- Login Page Centering --- */
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 80vh; /* ความสูงเกือบเต็มจอ */
+  min-height: 80vh;
   width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar-container {
+      flex-direction: column;
+      gap: 15px;
+  }
+  .navbar-links {
+      flex-wrap: wrap;
+      justify-content: center;
+  }
+  .form-card-container {
+      padding: 20px;
+  }
+}
+
+/* --- 1. Navbar Style (แถบเมนูบน) --- */
+.navbar-modern {
+    background-color: #ffffff;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); /* เงาบางๆ ด้านล่าง */
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding: 0 20px;
+}
+
+.navbar-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between; /* จัด ซ้าย-กลาง-ขวา */
+    align-items: center;
+}
+
+/* ส่วนโลโก้ */
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    color: #1e1b4b; /* สีกรมท่า */
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+/* ส่วนเมนูตรงกลาง */
+.navbar-menu-center {
+    display: flex;
+    gap: 15px;
+}
+
+/* ปุ่มเมนูแบบเม็ดยา (Pill) */
+.nav-pill {
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px; /* ขอบมน */
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #64748b; /* สีเทาเข้ม */
+    transition: all 0.2s;
+}
+
+.nav-pill:hover {
+    background-color: #f1f5f9;
+    color: #3b82f6;
+}
+
+/* ปุ่มที่ถูกเลือก (Active) - สีฟ้าอ่อนตามรูป */
+.nav-pill.active {
+    background-color: #dbeafe; /* สีฟ้าอ่อนพื้นหลัง */
+    color: #2563eb; /* สีตัวหนังสือสีฟ้าเข้ม */
+    font-weight: 600;
+}
+
+/* ส่วนขวา (User) */
+.navbar-user {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.user-icon {
+    background-color: #f59e0b; /* สีเหลืองส้ม */
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+/* ปุ่ม Logout สีแดง */
+.btn-logout-red {
+    background-color: #f43f5e; /* สีแดงชมพู */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(244, 63, 94, 0.3);
+}
+
+.btn-logout-red:hover {
+    background-color: #e11d48;
+}
+
+/* --- 2. Layout & Footer --- */
+.page-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f3f4f6; /* พื้นหลังสีเทาอ่อน */
+}
+
+.main-content {
+    flex: 1; /* ดัน Footer ลงล่างสุด */
+    display: flex;
+    justify-content: center;
+    padding-top: 40px;
+    padding-bottom: 40px;
+}
+
+/* Footer สวยๆ ด้านล่าง */
+.site-footer {
+    background-color: #ffffff; /* พื้นหลังขาว */
+    border-top: 1px solid #e2e8f0;
+    padding: 20px 0;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-links span {
+    margin-right: 15px;
+    cursor: pointer;
+}
+.footer-social {
+    display: flex;
+    gap: 10px;
+}
+.social-icon {
+    width: 24px; 
+    height: 24px; 
+    background: #e2e8f0; 
+    border-radius: 4px; 
+    display:inline-block;
+}
+.nav-pill-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif; /* ใช้ฟอนต์เดียวกับเว็บ */
+    font-size: 0.95rem;
+    color: #64748b;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.nav-pill-btn:hover {
+    background-color: #f1f5f9;
+    color: #3b82f6;
 }

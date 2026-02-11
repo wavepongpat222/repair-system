@@ -4,208 +4,193 @@ import { useParams, useNavigate } from 'react-router-dom';
 import './App.css';
 
 function JobDetail() {
-    const { id } = useParams(); // รับ ID งานซ่อมจาก URL
+    const { id } = useParams();
     const navigate = useNavigate();
-    const [repair, setRepair] = useState(null);
-    const [materials, setMaterials] = useState([]); // รายชื่อวัสดุในคลัง
-    const [requests, setRequests] = useState([]);   // ประวัติการเบิกของงานนี้
-    
-    // Form States
-    const [details, setDetails] = useState('');
-    const [status, setStatus] = useState('');
-    const [file, setFile] = useState(null);
-    
-    // Withdrawal Form
-    const [selectedMat, setSelectedMat] = useState('');
-    const [qty, setQty] = useState(1);
+    const [job, setJob] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
 
-    const currentUser = JSON.parse(localStorage.getItem('user'));
+    // เพิ่ม State สำหรับสถานะและรายละเอียดการซ่อม (เผื่อช่างต้องอัปเดต)
+    const [status, setStatus] = useState('');
+    const [repairDetails, setRepairDetails] = useState('');
+    const [imageAfter, setImageAfter] = useState(null);
 
     useEffect(() => {
-        fetchRepairData();
-        fetchMaterials();
-        fetchRequests();
-    }, []);
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) { navigate('/'); return; }
+        setCurrentUser(user);
 
-    const fetchRepairData = () => {
-        axios.get('http://localhost:3001/repair/' + id).then(res => {
-            setRepair(res.data);
-            setDetails(res.data.repair_details || '');
-            setStatus(res.data.status);
-        });
-    }
-    const fetchMaterials = () => {
-        axios.get('http://localhost:3001/materials').then(res => setMaterials(res.data));
-    }
-    const fetchRequests = () => {
-        axios.get('http://localhost:3001/job-materials/' + id).then(res => setRequests(res.data));
-    }
+        // ดึงข้อมูลงานซ่อม
+        axios.get('http://localhost:3001/repair/' + id)
+            .then(res => {
+                setJob(res.data);
+                setStatus(res.data.status);
+                setRepairDetails(res.data.repair_details || '');
+            })
+            .catch(err => console.log(err));
+    }, [id, navigate]);
 
+    // --- ฟังก์ชัน "ย้อนกลับ" แบบฉลาด (เช็ค Role) ---
+    const handleBack = () => {
+        if (!currentUser) {
+            navigate('/');
+            return;
+        }
+
+        switch (currentUser.role) {
+            case 'admin':
+                navigate('/admin-dashboard');
+                break;
+            case 'technician':
+            case 'supervisor':
+                navigate('/dashboard'); // ช่าง/หัวหน้าช่าง กลับไปหน้างานซ่อม
+                break;
+            case 'inventory':
+                navigate('/inventory-dashboard');
+                break;
+            case 'user':
+                navigate('/history'); // User กลับไปหน้าประวัติ
+                break;
+            default:
+                navigate('/');
+        }
+    };
+
+    // ฟังก์ชันอัปเดตงาน (สำหรับช่าง)
     const handleUpdateJob = (e) => {
         e.preventDefault();
         const formData = new FormData();
         formData.append('id', id);
-        formData.append('repair_details', details);
         formData.append('status', status);
-        if(file) formData.append('image_after', file);
+        formData.append('repair_details', repairDetails);
+        if (imageAfter) {
+            formData.append('image_after', imageAfter);
+        }
 
-        axios.put('http://localhost:3001/update-repair-job', formData, {
-            headers: {'Content-Type': 'multipart/form-data'}
-        }).then(res => {
-            if(res.data === "Success") { alert("บันทึกข้อมูลสำเร็จ ✅"); fetchRepairData(); }
-        });
-    }
+        axios.put('http://localhost:3001/update-repair-job', formData)
+            .then(res => {
+                if (res.data === "Success") {
+                    alert("บันทึกการซ่อมเรียบร้อย ✅");
+                    navigate('/dashboard'); // บันทึกเสร็จกลับไปหน้า Dashboard ช่าง
+                }
+            })
+            .catch(err => console.log(err));
+    };
 
-    const handleRequestMaterial = () => {
-        if(!selectedMat) return alert("เลือกวัสดุก่อน");
-        axios.post('http://localhost:3001/request-material', {
-            repair_id: id,
-            material_id: selectedMat,
-            quantity: qty,
-            technician_id: currentUser.user_id
-        }).then(res => {
-            if(res.data === "Success") { alert("ส่งคำขอเบิกแล้ว 📦"); fetchRequests(); }
-        });
-    }
-
-    const handlePrint = () => { window.print(); }
-
-    if (!repair) return <div>Loading...</div>;
+    if (!job) return <div className="container" style={{textAlign:'center', marginTop:'50px'}}>กำลังโหลดข้อมูล...</div>;
 
     return (
-        <div className="container" style={{paddingBottom: '50px'}}>
-            {/* Header ส่วนนี้ซ่อนตอนปริ้น */}
-            <div className="no-print" style={{marginBottom: '20px', display: 'flex', justifyContent: 'space-between'}}>
-                <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>🔙 กลับหน้าหลัก</button>
-                <button className="btn btn-primary" onClick={handlePrint}>🖨️ พิมพ์รายงาน</button>
-            </div>
+        <div className="container" style={{ marginTop: '20px', paddingBottom: '40px' }}>
+            
+            {/* ปุ่มย้อนกลับ */}
+            <button 
+                onClick={handleBack} 
+                className="btn-secondary no-print"
+                style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '5px' }}
+            >
+                ⬅️ ย้อนกลับ
+            </button>
 
-            {/* --- รายงานการซ่อม (ส่วนที่จะถูกปริ้น) --- */}
-            <div className="card report-area">
-                <h2 style={{textAlign: 'center', borderBottom: '2px solid #ddd', paddingBottom: '10px'}}>📄 ใบรายงานการซ่อมบำรุง</h2>
-                
-                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '20px'}}>
-                    <div>
-                        <p><b>เลขที่ใบแจ้งซ่อม:</b> {repair.id}</p>
-                        <p><b>อุปกรณ์:</b> {repair.device_name}</p>
-                        <p><b>สถานที่:</b> {repair.location}</p>
-                    </div>
-                    <div style={{textAlign: 'right'}}>
-                        <p><b>วันที่แจ้ง:</b> {new Date(repair.date_created).toLocaleDateString('th-TH')}</p>
-                        <p><b>สถานะปัจจุบัน:</b> {repair.status === 'done' ? '✅ ซ่อมเสร็จสิ้น' : repair.status === 'doing' ? '🛠 กำลังดำเนินการ' : '⏳ รอดำเนินการ'}</p>
-                    </div>
-                </div>
+            <div className="card">
+                <h2 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+                    🛠️ รายละเอียดใบแจ้งซ่อม #{job.id}
+                </h2>
 
-                <hr />
-                
-                <h4>1. รายละเอียดปัญหา</h4>
-                <p>{repair.problem_detail}</p>
-                <div style={{marginBottom: '20px'}}>
-                    {repair.repair_image && <img src={`http://localhost:3001/uploads/${repair.repair_image}`} alt="before" style={{maxWidth: '200px', border: '1px solid #ccc'}} />}
-                    <p style={{fontSize: '0.8rem', color: '#666'}}>* รูปภาพก่อนซ่อม</p>
-                </div>
-
-                <h4>2. ผลการดำเนินงาน (สำหรับช่าง)</h4>
-                <div className="no-print" style={{backgroundColor: '#f9fafb', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #eee'}}>
-                    <form onSubmit={handleUpdateJob}>
-                        <div className="form-group">
-                            <label>สถานะงาน:</label>
-                            <select value={status} onChange={e => setStatus(e.target.value)} style={{marginLeft: '10px', padding: '5px'}}>
-                                <option value="pending">รอดำเนินการ</option>
-                                <option value="doing">กำลังซ่อม</option>
-                                <option value="done">ดำเนินการเสร็จสิ้น</option>
-                            </select>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px' }}>
+                    {/* ข้อมูลฝั่งซ้าย (รายละเอียดปัญหา) */}
+                    <div style={{ flex: 1, minWidth: '300px' }}>
+                        <p><strong>📅 วันที่แจ้ง:</strong> {new Date(job.date_created).toLocaleDateString('th-TH')} {new Date(job.date_created).toLocaleTimeString('th-TH')}</p>
+                        <p><strong>👤 ผู้แจ้ง:</strong> {job.reporter_first_name} {job.reporter_last_name}</p>
+                        <p><strong>💻 อุปกรณ์:</strong> <span style={{color:'#3b82f6', fontWeight:'bold'}}>{job.device_name}</span></p>
+                        <p><strong>📍 สถานที่:</strong> {job.location}</p>
+                        <div style={{ background: '#f9fafb', padding: '15px', borderRadius: '8px', marginTop: '10px' }}>
+                            <strong>อาการเสีย:</strong>
+                            <p style={{ margin: '5px 0 0 0', color: '#374151' }}>{job.problem_detail}</p>
                         </div>
-                        <div className="form-group">
-                            <label>รายละเอียดการซ่อม:</label>
-                            <textarea className="form-control" rows="3" value={details} onChange={e => setDetails(e.target.value)} placeholder="ระบุสิ่งที่ทำไป..."></textarea>
-                        </div>
-                        <div className="form-group">
-                            <label>รูปภาพหลังซ่อม:</label>
-                            <input type="file" onChange={e => setFile(e.target.files[0])} />
-                        </div>
-                        <button type="submit" className="btn btn-primary">💾 บันทึกผลการซ่อม</button>
-                    </form>
-                </div>
-                
-                {/* ส่วนแสดงผล (Show Only) สำหรับการปริ้น */}
-                <div className="print-only-block">
-                    <p>{repair.repair_details || "-"}</p>
-                    {repair.repair_image_after && (
-                        <div>
-                            <img src={`http://localhost:3001/uploads/${repair.repair_image_after}`} alt="after" style={{maxWidth: '200px', border: '1px solid #ccc'}} />
-                            <p style={{fontSize: '0.8rem', color: '#666'}}>* รูปภาพหลังซ่อม</p>
-                        </div>
-                    )}
-                </div>
 
-                <hr />
-
-                <h4>3. รายการวัสดุอุปกรณ์ที่ใช้ (เบิก)</h4>
-                {/* ฟอร์มขอเบิก (ซ่อนตอนปริ้น) */}
-                <div className="no-print" style={{display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'flex-end'}}>
-                    <div style={{flex: 2}}>
-                        <label>เลือกวัสดุ:</label>
-                        <select className="form-control" onChange={e => setSelectedMat(e.target.value)} value={selectedMat} style={{width: '100%', padding: '8px'}}>
-                            <option value="">-- เลือก --</option>
-                            {materials.map(m => <option key={m.id} value={m.id}>{m.material_name} (คงเหลือ: {m.quantity} {m.unit})</option>)}
-                        </select>
+                        {/* รูปภาพก่อนซ่อม */}
+                        {job.repair_image && (
+                            <div style={{ marginTop: '20px' }}>
+                                <strong>รูปภาพประกอบ (ก่อนซ่อม):</strong><br />
+                                <img 
+                                    src={`http://localhost:3001/uploads/${job.repair_image}`} 
+                                    alt="Before" 
+                                    style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '10px', maxHeight: '300px', border: '1px solid #ddd' }} 
+                                />
+                            </div>
+                        )}
                     </div>
-                    <div style={{flex: 1}}>
-                        <label>จำนวน:</label>
-                        <input type="number" className="form-control" min="1" value={qty} onChange={e => setQty(e.target.value)} style={{width: '100%', padding: '8px'}} />
-                    </div>
-                    <button onClick={handleRequestMaterial} className="btn btn-secondary" style={{backgroundColor: '#10b981', color: 'white'}}>➕ ขอเบิก</button>
-                </div>
 
-                {/* ตารางรายการเบิก */}
-                <table className="custom-table" style={{width: '100%'}}>
-                    <thead>
-                        <tr>
-                            <th>รายการวัสดุ</th>
-                            <th style={{textAlign: 'center'}}>จำนวน</th>
-                            <th style={{textAlign: 'center'}}>สถานะการอนุมัติ</th>
-                            <th style={{textAlign: 'center'}}>วันที่ขอ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {requests.length > 0 ? requests.map(r => (
-                            <tr key={r.id}>
-                                <td>{r.material_name}</td>
-                                <td style={{textAlign: 'center'}}>{r.quantity} {r.unit}</td>
-                                <td style={{textAlign: 'center'}}>
-                                    <span className={`status-badge ${r.status === 'approved' ? 'status-done' : r.status === 'rejected' ? 'status-pending' : 'status-doing'}`}>
-                                        {r.status === 'approved' ? 'อนุมัติแล้ว' : r.status === 'rejected' ? 'ไม่อนุมัติ' : 'รออนุมัติ'}
+                    {/* ข้อมูลฝั่งขวา (ส่วนการซ่อมของช่าง) */}
+                    <div style={{ flex: 1, minWidth: '300px', borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
+                        <h4 style={{ marginTop: 0 }}>🔧 ส่วนของเจ้าหน้าที่/ช่าง</h4>
+                        
+                        {/* ถ้าเป็นช่าง หรือ Admin ให้แสดงฟอร์มแก้ไข */}
+                        {['technician', 'supervisor', 'admin'].includes(currentUser?.role) ? (
+                            <form onSubmit={handleUpdateJob}>
+                                <div className="form-group">
+                                    <label>สถานะงานปัจจุบัน</label>
+                                    <select 
+                                        className="input-modern" 
+                                        value={status} 
+                                        onChange={e => setStatus(e.target.value)}
+                                    >
+                                        <option value="pending">⏳ รอรับเรื่อง</option>
+                                        <option value="doing">🛠 กำลังซ่อม</option>
+                                        <option value="done">✅ ซ่อมเสร็จสิ้น</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>รายละเอียดการแก้ไข / สาเหตุ</label>
+                                    <textarea 
+                                        className="input-modern" 
+                                        rows="4" 
+                                        value={repairDetails} 
+                                        onChange={e => setRepairDetails(e.target.value)}
+                                        placeholder="ระบุสิ่งที่ทำไป หรืออะไหล่ที่เปลี่ยน..."
+                                    ></textarea>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>รูปภาพหลังซ่อมเสร็จ (ถ้ามี)</label>
+                                    <div className="file-input-wrapper">
+                                        <input type="file" onChange={e => setImageAfter(e.target.files[0])} />
+                                    </div>
+                                </div>
+
+                                <button type="submit" className="btn btn-primary" style={{width: '100%'}}>
+                                    💾 บันทึกผลการซ่อม
+                                </button>
+                            </form>
+                        ) : (
+                            // ถ้าเป็น User ทั่วไป ให้ดูได้อย่างเดียว
+                            <div>
+                                <p><strong>สถานะ:</strong> 
+                                    <span className={`status-badge ${job.status === 'done' ? 'status-done' : job.status === 'doing' ? 'status-doing' : 'status-pending'}`} style={{marginLeft:'10px'}}>
+                                        {job.status === 'done' ? 'เสร็จสิ้น' : job.status === 'doing' ? 'กำลังซ่อม' : 'รอรับเรื่อง'}
                                     </span>
-                                </td>
-                                <td style={{textAlign: 'center'}}>{new Date(r.date_requested).toLocaleString('th-TH')}</td>
-                            </tr>
-                        )) : <tr><td colSpan="4" style={{textAlign: 'center', color: '#999'}}>ไม่มีรายการเบิก</td></tr>}
-                    </tbody>
-                </table>
+                                </p>
+                                <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', marginTop: '10px', border:'1px solid #dcfce7' }}>
+                                    <strong>ผลการซ่อม:</strong>
+                                    <p style={{ margin: '5px 0 0 0' }}>{job.repair_details || "-"}</p>
+                                </div>
+                            </div>
+                        )}
 
-                <div className="only-print" style={{marginTop: '50px', display: 'flex', justifyContent: 'space-between'}}>
-                    <div style={{textAlign: 'center'}}>
-                        <p>_________________________</p>
-                        <p>ผู้แจ้งซ่อม</p>
-                    </div>
-                    <div style={{textAlign: 'center'}}>
-                        <p>_________________________</p>
-                        <p>ช่างผู้ปฏิบัติงาน</p>
+                        {/* รูปภาพหลังซ่อม (แสดงให้ทุกคนเห็นถ้ามี) */}
+                        {job.repair_image_after && (
+                            <div style={{ marginTop: '20px' }}>
+                                <strong>รูปภาพหลังซ่อม:</strong><br />
+                                <img 
+                                    src={`http://localhost:3001/uploads/${job.repair_image_after}`} 
+                                    alt="After" 
+                                    style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '10px', maxHeight: '300px', border: '1px solid #ddd' }} 
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
-
-            <style>{`
-                @media print {
-                    .no-print { display: none !important; }
-                    .print-only-block { display: block !important; }
-                    .only-print { display: flex !important; }
-                    .container { width: 100%; max-width: 100%; margin: 0; padding: 0; }
-                    .card { border: none; box-shadow: none; }
-                    @page { margin: 2cm; }
-                }
-            `}</style>
         </div>
     );
 }

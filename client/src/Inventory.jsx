@@ -5,133 +5,184 @@ import './App.css';
 
 function Inventory() {
     const [materials, setMaterials] = useState([]);
+    const [myJobs, setMyJobs] = useState([]); // งานที่ช่างคนนี้กำลังทำอยู่
     const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
 
-    // Form States
-    const [isEditing, setIsEditing] = useState(false);
-    const [editId, setEditId] = useState(null);
-    const [name, setName] = useState('');
-    const [qty, setQty] = useState(0);
-    const [unit, setUnit] = useState('');
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedMaterial, setSelectedMaterial] = useState(null);
+    const [withdrawQty, setWithdrawQty] = useState(1);
+    const [selectedJobId, setSelectedJobId] = useState('');
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) { navigate('/'); return; }
         setCurrentUser(user);
+
         fetchMaterials();
+        
+        // ถ้าเป็นช่าง ให้ดึงงานที่ตัวเองกำลังทำอยู่มาด้วย (เพื่อเอามาใส่ใน Dropdown เลือกงาน)
+        if (user.role === 'technician') {
+            fetchMyActiveJobs(user.user_id);
+        }
     }, []);
 
     const fetchMaterials = () => {
-        axios.get('http://localhost:3001/materials').then(res => setMaterials(res.data));
+        axios.get('http://localhost:3001/materials')
+            .then(res => setMaterials(res.data))
+            .catch(err => console.log(err));
     }
 
-    const handleSave = (e) => {
+    const fetchMyActiveJobs = (userId) => {
+        axios.get('http://localhost:3001/my-repairs/' + userId) // เช็ค API นี้ว่าดึงงานของช่างได้ไหม หรือต้องสร้างใหม่
+            .then(res => {
+                // กรองเอาเฉพาะงานที่สถานะ "กำลังซ่อม" (doing)
+                // หมายเหตุ: ถ้า API /my-repairs ดึงตาม reporter_id (คนแจ้ง) อาจจะไม่ตรงกับ technician_id
+                // แต่เบื้องต้นใช้รายชื่อทั้งหมดมาเลือกก่อน หรือต้องแก้ API ให้ดึงงานตาม Technician
+                // เพื่อความชัวร์ ผมจะดึงงานทั้งหมดแล้วกรองเฉพาะที่ technician_id ตรงกับเรา
+                axios.get('http://localhost:3001/repairs').then(allJobs => {
+                    const active = allJobs.data.filter(job => 
+                        job.technician_id === userId && job.status === 'doing'
+                    );
+                    setMyJobs(active);
+                });
+            })
+            .catch(err => console.log(err));
+    }
+
+    const handleOpenWithdraw = (material) => {
+        setSelectedMaterial(material);
+        setWithdrawQty(1);
+        setSelectedJobId('');
+        setIsModalOpen(true);
+    }
+
+    const handleSubmitWithdraw = (e) => {
         e.preventDefault();
-        if (isEditing) {
-            axios.put('http://localhost:3001/update-material', { id: editId, name, quantity: qty, unit })
-                .then(res => {
-                    if(res.data === "Success") { alert("แก้ไขสำเร็จ"); resetForm(); fetchMaterials(); }
-                });
-        } else {
-            axios.post('http://localhost:3001/add-material', { name, qty, unit })
-                .then(res => {
-                    if(res.data === "Success") { alert("เพิ่มวัสดุสำเร็จ"); resetForm(); fetchMaterials(); }
-                });
-        }
-    }
+        if (!selectedJobId) { alert("กรุณาเลือกงานที่จะนำของไปใช้"); return; }
+        if (withdrawQty <= 0) { alert("จำนวนต้องมากกว่า 0"); return; }
+        if (withdrawQty > selectedMaterial.quantity) { alert("ของในคลังมีไม่พอ"); return; }
 
-    const handleEditClick = (mat) => {
-        setIsEditing(true);
-        setEditId(mat.id);
-        setName(mat.material_name);
-        setQty(mat.quantity);
-        setUnit(mat.unit);
+        axios.post('http://localhost:3001/request-material', {
+            repair_id: selectedJobId,
+            material_id: selectedMaterial.id,
+            quantity: withdrawQty,
+            technician_id: currentUser.user_id
+        }).then(res => {
+            if (res.data === "Success") {
+                alert("ส่งคำขอเบิกเรียบร้อย ✅ รอหัวหน้าอนุมัติ");
+                setIsModalOpen(false);
+                fetchMaterials(); // รีเฟรชหน้าจอ
+            } else {
+                alert("เกิดข้อผิดพลาด");
+            }
+        });
     }
-
-    const handleDelete = (id) => {
-        if(!window.confirm("ยืนยันการลบวัสดุนี้?")) return;
-        axios.delete('http://localhost:3001/delete-material/' + id)
-            .then(res => { if(res.data === "Success") fetchMaterials(); });
-    }
-
-    const resetForm = () => {
-        setIsEditing(false); setEditId(null); setName(''); setQty(0); setUnit('');
-    }
-
-    // +++ เพิ่มฟังก์ชันนี้ครับ: เช็คว่าใครกดปุ่มกลับ +++
-    const handleBack = () => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user?.role === 'inventory') {
-            navigate('/inventory-dashboard'); // ฝ่ายคลัง กลับบ้านตัวเอง
-        } else {
-            navigate('/dashboard'); // คนอื่น กลับ Dashboard รวม
-        }
-    }
-
-    const canManage = currentUser?.role === 'inventory' || currentUser?.role === 'admin';
 
     return (
-        <div className="container">
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-                <h2>📦 คลังวัสดุอุปกรณ์</h2>
-                {/* เรียกใช้ handleBack แทนการ navigate ตรงๆ */}
-                <button className="btn btn-secondary" onClick={handleBack}>🔙 กลับหน้าหลัก</button>
-            </div>
+        <div className="container" style={{marginTop: '20px'}}>
+            <h2 style={{textAlign: 'left', marginBottom: '20px'}}>📦 คลังวัสดุอุปกรณ์</h2>
 
-            {canManage && (
-                <div className="card" style={{marginBottom: '20px', backgroundColor: '#f9fafb'}}>
-                    <h4>{isEditing ? '✏️ แก้ไขรายการวัสดุ' : '➕ เพิ่มวัสดุใหม่'}</h4>
-                    <form onSubmit={handleSave} style={{display: 'flex', gap: '10px', alignItems: 'flex-end'}}>
-                        <div style={{flex: 2}}>
-                            <label>ชื่อวัสดุ</label>
-                            <input type="text" className="form-control" value={name} onChange={e => setName(e.target.value)} required />
-                        </div>
-                        <div style={{flex: 1}}>
-                            <label>จำนวนคงเหลือ</label>
-                            <input type="number" className="form-control" value={qty} onChange={e => setQty(e.target.value)} required />
-                        </div>
-                        <div style={{flex: 1}}>
-                            <label>หน่วยนับ</label>
-                            <input type="text" className="form-control" value={unit} onChange={e => setUnit(e.target.value)} required placeholder="เช่น ชิ้น, อัน" />
-                        </div>
-                        <button type="submit" className="btn btn-primary">{isEditing ? 'บันทึกแก้ไข' : 'เพิ่มรายการ'}</button>
-                        {isEditing && <button type="button" className="btn btn-secondary" onClick={resetForm}>ยกเลิก</button>}
-                    </form>
-                </div>
-            )}
-
-            <div className="card" style={{padding: '0', overflow: 'hidden'}}>
+            <div className="card" style={{ padding: '0', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
                 <table className="custom-table">
                     <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>รายการวัสดุ</th>
+                        <tr style={{backgroundColor: '#f9fafb'}}>
+                            <th>รหัส</th>
+                            <th>ชื่อวัสดุ</th>
                             <th style={{textAlign: 'center'}}>คงเหลือ</th>
                             <th style={{textAlign: 'center'}}>หน่วย</th>
-                            {canManage && <th style={{textAlign: 'center'}}>จัดการ</th>}
+                            <th style={{textAlign: 'center'}}>ดำเนินการ</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {materials.map(m => (
+                        {materials.map((m) => (
                             <tr key={m.id}>
                                 <td>{m.id}</td>
-                                <td style={{fontWeight: '500'}}>{m.material_name}</td>
-                                <td style={{textAlign: 'center', color: m.quantity < 10 ? 'red' : 'black', fontWeight: 'bold'}}>
+                                <td>{m.material_name}</td>
+                                <td style={{textAlign: 'center', fontWeight: 'bold', color: m.quantity === 0 ? 'red' : 'green'}}>
                                     {m.quantity}
                                 </td>
                                 <td style={{textAlign: 'center'}}>{m.unit}</td>
-                                {canManage && (
-                                    <td style={{textAlign: 'center'}}>
-                                        <button onClick={() => handleEditClick(m)} style={{marginRight: '5px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem'}}>✏️</button>
-                                        <button onClick={() => handleDelete(m.id)} style={{color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem'}}>🗑️</button>
-                                    </td>
-                                )}
+                                <td style={{textAlign: 'center'}}>
+                                    {currentUser?.role === 'technician' && (
+                                        <button 
+                                            className="btn-sm btn-primary"
+                                            onClick={() => handleOpenWithdraw(m)}
+                                            disabled={m.quantity === 0}
+                                            style={{
+                                                opacity: m.quantity === 0 ? 0.5 : 1, 
+                                                cursor: m.quantity === 0 ? 'not-allowed' : 'pointer'
+                                            }}
+                                        >
+                                            {m.quantity === 0 ? 'หมด' : 'เบิกของ'}
+                                        </button>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* --- MODAL (หน้าต่างป๊อปอัพสำหรับเบิกของ) --- */}
+            {isModalOpen && selectedMaterial && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+                }}>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '400px', maxWidth:'90%' }}>
+                        <h3 style={{marginTop: 0, borderBottom:'1px solid #eee', paddingBottom:'10px'}}>
+                            🛠️ เบิก: {selectedMaterial.material_name}
+                        </h3>
+                        
+                        <form onSubmit={handleSubmitWithdraw}>
+                            {/* 1. เลือกงานซ่อม */}
+                            <div className="form-group">
+                                <label>ใช้สำหรับงานซ่อม (Job ID)</label>
+                                <select 
+                                    className="input-modern" 
+                                    value={selectedJobId} 
+                                    onChange={e => setSelectedJobId(e.target.value)}
+                                    required
+                                >
+                                    <option value="">-- เลือกงานที่กำลังทำ --</option>
+                                    {myJobs.length > 0 ? (
+                                        myJobs.map(job => (
+                                            <option key={job.id} value={job.id}>
+                                                งาน #{job.id} : {job.device_name}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="" disabled>ไม่มีงานที่กำลังซ่อมอยู่</option>
+                                    )}
+                                </select>
+                                {myJobs.length === 0 && <small style={{color:'red'}}>* ต้องมีงานสถานะ "กำลังซ่อม" ถึงจะเบิกได้</small>}
+                            </div>
+
+                            {/* 2. ระบุจำนวน */}
+                            <div className="form-group">
+                                <label>จำนวนที่จะเบิก ({selectedMaterial.unit})</label>
+                                <input 
+                                    type="number" 
+                                    className="input-modern"
+                                    min="1" 
+                                    max={selectedMaterial.quantity} 
+                                    value={withdrawQty} 
+                                    onChange={e => setWithdrawQty(e.target.value)} 
+                                    required 
+                                />
+                                <small style={{color:'#666'}}>คงเหลือในคลัง: {selectedMaterial.quantity}</small>
+                            </div>
+
+                            <div style={{display: 'flex', gap: '10px', marginTop:'20px'}}>
+                                <button type="submit" className="btn btn-primary" style={{flex: 1}}>ยืนยันเบิก</button>
+                                <button type="button" className="btn btn-secondary" style={{flex: 1}} onClick={() => setIsModalOpen(false)}>ยกเลิก</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

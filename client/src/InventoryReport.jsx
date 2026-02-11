@@ -13,17 +13,7 @@ function InventoryReport() {
         axios.get('http://localhost:3001/all-withdrawal-requests').then(res => setWithdrawals(res.data));
     }, []);
 
-    const handlePrint = () => { window.print(); }
-
-    // +++ เพิ่มฟังก์ชันนี้ครับ: เช็คว่าใครกดปุ่มกลับ +++
-    const handleBack = () => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user?.role === 'inventory') {
-            navigate('/inventory-dashboard');
-        } else {
-            navigate('/dashboard');
-        }
-    }
+    
 
     const lowStockItems = materials.filter(m => m.quantity < 5);
 
@@ -31,11 +21,7 @@ function InventoryReport() {
         <div className="container">
             <div className="no-print" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
                 <h2>📊 รายงานสรุปคลังวัสดุอุปกรณ์</h2>
-                <div style={{display: 'flex', gap: '10px'}}>
-                    {/* เรียกใช้ handleBack */}
-                    <button className="btn btn-secondary" onClick={handleBack}>🔙 กลับ</button>
-                    <button className="btn btn-primary" onClick={handlePrint}>🖨️ พิมพ์รายงาน</button>
-                </div>
+                
             </div>
 
             <div className="card report-area">
