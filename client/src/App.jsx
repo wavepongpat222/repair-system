@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './Navbar'; 
+import Home from './Home'; // <--- 1. อย่าลืม Import Home
 import Login from './Login';
 import Dashboard from './Dashboard';
 import CreateRepair from './CreateRepair';
@@ -15,23 +16,27 @@ import InventoryReport from './InventoryReport';
 import InventoryDashboard from './InventoryDashboard';
 import AdminDashboard from './AdminDashboard';
 import RepairHistory from './RepairHistory';
-import MyTasks from './MyTasks'; // <--- 1. เพิ่ม Import MyTasks
+import MyTasks from './MyTasks';
 
 function App() {
   return (
     <BrowserRouter>
-      {/* 2. ใช้ Wrapper คลุมทั้งหมดเพื่อจัด Layout */}
+      {/* Wrapper คลุมทั้งหมดเพื่อจัด Layout */}
       <div className="page-wrapper">
         
-        {/* 3. วาง Navbar ไว้บนสุด */}
+        {/* Navbar อยู่บนสุด */}
         <Navbar />
 
-        {/* 4. ส่วนเนื้อหาหลัก (จะยืดขยายดัน Footer ลงล่าง) */}
+        {/* ส่วนเนื้อหาหลัก */}
         <div className="main-content">
           <Routes>
-            <Route path="/" element={<Login />} />
+            {/* 2. ปรับเปลี่ยน Route หลัก */}
+            <Route path="/" element={<Home />} />           {/* หน้าแรก = Home */}
+            <Route path="/login" element={<Login />} />     {/* หน้า Login แยกออกมา */}
+            
+            {/* Route อื่นๆ เหมือนเดิม */}
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/my-tasks" element={<MyTasks />} /> {/* <--- 2. เพิ่ม Route งานของฉัน */}
+            <Route path="/my-tasks" element={<MyTasks />} />
             <Route path="/create" element={<CreateRepair />} />
             <Route path="/add-user" element={<AddUser />} />
             <Route path="/inventory" element={<Inventory />} />
@@ -48,7 +53,7 @@ function App() {
           </Routes>
         </div>
 
-        {/* 5. Footer ด้านล่างสุด */}
+        {/* Footer ด้านล่างสุด */}
         <footer className="site-footer">
             <div className="footer-container">
                 <div className="footer-links">

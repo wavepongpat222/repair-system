@@ -6,12 +6,16 @@ import './App.css';
 function InventoryDashboard() {
     const [materials, setMaterials] = useState([]);
     const [newMaterial, setNewMaterial] = useState({ name: '', qty: '', unit: '' });
-    const [searchTerm, setSearchTerm] = useState(''); // 🔍 ตัวแปรสำหรับค้นหา
+    const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
-    // State สำหรับการแก้ไข (Modal)
+    // Modal State สำหรับแก้ไข
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState({ id: '', name: '', qty: '', unit: '' });
+    
+    // Modal State สำหรับยืนยันการลบ
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteId, setDeleteId] = useState(null);
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
@@ -37,13 +41,23 @@ function InventoryDashboard() {
             });
     }
 
-    const handleDelete = (id) => {
-        if(!window.confirm("ยืนยันการลบวัสดุนี้?")) return;
-        axios.delete('http://localhost:3001/delete-material/' + id)
-            .then(res => { if(res.data === "Success") fetchMaterials(); });
+    // 1. กดปุ่มลบ (เปิด Popup)
+    const handleClickDelete = (id) => {
+        setDeleteId(id);
+        setShowDeleteModal(true);
     }
 
-    // --- ฟังก์ชันเปิด Modal แก้ไข ---
+    // 2. ยืนยันลบ (ยิง API)
+    const confirmDelete = () => {
+        axios.delete('http://localhost:3001/delete-material/' + deleteId)
+            .then(res => { 
+                if(res.data === "Success") {
+                    fetchMaterials(); 
+                    setShowDeleteModal(false);
+                }
+            });
+    }
+
     const handleEditClick = (material) => {
         setEditingMaterial({
             id: material.id,
@@ -54,7 +68,6 @@ function InventoryDashboard() {
         setIsEditModalOpen(true);
     }
 
-    // --- ฟังก์ชันบันทึกการแก้ไข ---
     const handleUpdateMaterial = (e) => {
         e.preventDefault();
         axios.put('http://localhost:3001/update-material', {
@@ -73,7 +86,6 @@ function InventoryDashboard() {
         });
     }
 
-    // กรองข้อมูลตามคำค้นหา (Search Logic)
     const filteredMaterials = materials.filter(m => 
         m.material_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -83,7 +95,7 @@ function InventoryDashboard() {
             
             <h2 style={{textAlign: 'left', marginBottom: '20px'}}>📦 จัดการคลังวัสดุอุปกรณ์</h2>
 
-            {/* ช่องค้นหา (Search Bar) */}
+            {/* ช่องค้นหา */}
             <div className="card no-print" style={{padding:'15px', marginBottom:'20px'}}>
                 <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
                     <span style={{fontSize:'1.2rem'}}>🔍</span>
@@ -100,11 +112,12 @@ function InventoryDashboard() {
 
             <div style={{display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap:'wrap'}}>
                 
-                {/* ตารางรายการวัสดุ (ซ้าย) */}
+                {/* ตารางรายการวัสดุ */}
                 <div className="card" style={{flex: 2, padding: '0', overflow: 'hidden', minWidth:'300px'}}>
                     <table className="custom-table">
                         <thead>
                             <tr style={{backgroundColor: '#f9fafb'}}>
+                                <th style={{textAlign: 'center', width: '60px'}}>ลำดับ</th>
                                 <th>ชื่อวัสดุ</th>
                                 <th style={{textAlign: 'center'}}>คงเหลือ</th>
                                 <th style={{textAlign: 'center'}}>หน่วย</th>
@@ -112,8 +125,9 @@ function InventoryDashboard() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredMaterials.map((m) => (
+                            {filteredMaterials.map((m, index) => (
                                 <tr key={m.id}>
+                                    <td style={{textAlign: 'center'}}>{index + 1}</td>
                                     <td>{m.material_name}</td>
                                     <td style={{textAlign: 'center', fontWeight: 'bold', color: m.quantity < 5 ? 'red' : 'black'}}>
                                         {m.quantity}
@@ -128,7 +142,7 @@ function InventoryDashboard() {
                                             ✏️
                                         </button>
                                         <button 
-                                            onClick={() => handleDelete(m.id)} 
+                                            onClick={() => handleClickDelete(m.id)} 
                                             style={{border:'none', background:'none', cursor:'pointer', fontSize:'1.1rem'}} 
                                             title="ลบ"
                                         >
@@ -138,13 +152,13 @@ function InventoryDashboard() {
                                 </tr>
                             ))}
                             {filteredMaterials.length === 0 && (
-                                <tr><td colSpan="4" style={{textAlign:'center', padding:'20px', color:'#888'}}>ไม่พบวัสดุที่ค้นหา</td></tr>
+                                <tr><td colSpan="5" style={{textAlign:'center', padding:'20px', color:'#888'}}>ไม่พบวัสดุที่ค้นหา</td></tr>
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* ฟอร์มเพิ่มวัสดุใหม่ (ขวา) */}
+                {/* ฟอร์มเพิ่มวัสดุใหม่ */}
                 <div className="card no-print" style={{flex: 1, padding: '20px', minWidth:'250px'}}>
                     <h4 style={{marginTop:0, borderBottom:'1px solid #eee', paddingBottom:'10px'}}>+ เพิ่มวัสดุใหม่</h4>
                     <form onSubmit={handleAdd}>
@@ -166,13 +180,10 @@ function InventoryDashboard() {
 
             </div>
 
-            {/* --- MODAL สำหรับแก้ไขวัสดุ --- */}
+            {/* --- Modal แก้ไขวัสดุ --- */}
             {isEditModalOpen && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-                }}>
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '400px', maxWidth:'90%', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+                <div className="modal-overlay" style={modalOverlayStyle}>
+                    <div className="modal-box" style={modalBoxStyle}>
                         <h3 style={{marginTop: 0, marginBottom: '20px', color:'#333'}}>✏️ แก้ไขข้อมูลวัสดุ</h3>
                         <form onSubmit={handleUpdateMaterial}>
                             <div className="form-group">
@@ -220,8 +231,36 @@ function InventoryDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* --- Modal ยืนยันลบ (กลางจอ) --- */}
+            {showDeleteModal && (
+                <div className="modal-overlay" style={modalOverlayStyle}>
+                    <div className="modal-box" style={modalBoxStyle}>
+                        <div style={{fontSize: '3rem', marginBottom: '10px'}}>⚠️</div>
+                        <h3 style={{marginTop: 0, color:'#333'}}>ยืนยันลบวัสดุ?</h3>
+                        <p style={{color: '#666', marginBottom: '25px'}}>คุณต้องการลบรายการนี้ออกจากคลังใช่หรือไม่?</p>
+                        <div style={{display: 'flex', gap: '10px'}}>
+                            <button onClick={confirmDelete} style={{flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize:'1rem'}}>ลบข้อมูล</button>
+                            <button onClick={() => setShowDeleteModal(false)} style={{flex: 1, backgroundColor: '#e5e7eb', color: '#374151', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize:'1rem'}}>ยกเลิก</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
+// สไตล์สำหรับ Popup กลางจอ
+const modalOverlayStyle = {
+    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+    display: 'flex', justifyContent: 'center', alignItems: 'center'
+};
+
+const modalBoxStyle = {
+    backgroundColor: 'white', padding: '30px', borderRadius: '16px',
+    width: '90%', maxWidth: '400px', textAlign: 'center',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease-out'
+};
 
 export default InventoryDashboard;

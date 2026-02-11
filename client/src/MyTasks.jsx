@@ -10,23 +10,18 @@ function MyTasks() {
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'technician') { navigate('/'); return; }
-        
-        // ดึงงานเฉพาะของช่างคนนี้
-        axios.get('http://localhost:3001/technician-jobs/' + user.user_id)
-            .then(res => setJobs(res.data))
-            .catch(err => console.log(err));
+        axios.get('http://localhost:3001/technician-jobs/' + user.user_id).then(res => setJobs(res.data)).catch(err => console.log(err));
     }, []);
 
     return (
         <div className="container" style={{marginTop: '20px'}}>
-            <h2 style={{textAlign: 'left', marginBottom: '20px', color: '#2563eb'}}>
-                🛠️ งานของฉัน (Assigned to Me) - {jobs.length} งาน
-            </h2>
-
+            <h2 style={{textAlign: 'left', marginBottom: '20px', color: '#2563eb'}}>🛠️ งานของฉัน (Assigned to Me) - {jobs.length} งาน</h2>
             <div className="card" style={{ padding: '0', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
                 <table className="custom-table">
                     <thead>
-                        <tr style={{backgroundColor: '#eff6ff'}}> {/* สีหัวตารางต่างจากหน้าหลักนิดหน่อย */}
+                        <tr style={{backgroundColor: '#eff6ff'}}>
+                            {/* ✅ เพิ่มหัวตารางลำดับ */}
+                            <th style={{textAlign: 'center', width: '60px'}}>ลำดับ</th>
                             <th>วันที่แจ้ง</th>
                             <th>อุปกรณ์</th>
                             <th>อาการ</th>
@@ -37,29 +32,20 @@ function MyTasks() {
                         </tr>
                     </thead>
                     <tbody>
-                        {jobs.map((job) => (
+                        {jobs.map((job, index) => ( // ✅ รับ index
                             <tr key={job.id}>
+                                {/* ✅ แสดงลำดับ */}
+                                <td style={{textAlign: 'center'}}>{index + 1}</td>
                                 <td>{new Date(job.date_created).toLocaleDateString('th-TH')}</td>
                                 <td>{job.device_name}</td>
                                 <td>{job.problem_detail}</td>
                                 <td>{job.location}</td>
                                 <td>{job.reporter_first_name} {job.reporter_last_name}</td>
-                                <td>
-                                    <span className={`status-badge ${job.status === 'done' ? 'status-done' : job.status === 'doing' ? 'status-doing' : 'status-pending'}`}>
-                                        {job.status === 'done' ? '✅ เสร็จสิ้น' : job.status === 'doing' ? '🛠 กำลังซ่อม' : '⏳ รอรับเรื่อง'}
-                                    </span>
-                                </td>
-                                <td style={{textAlign: 'center'}}>
-                                    <button 
-                                        className="btn-sm btn-primary"
-                                        onClick={() => navigate(`/job/${job.id}`)}
-                                    >
-                                        อัปเดตงาน
-                                    </button>
-                                </td>
+                                <td><span className={`status-badge ${job.status === 'done' ? 'status-done' : job.status === 'doing' ? 'status-doing' : 'status-pending'}`}>{job.status === 'done' ? '✅ เสร็จสิ้น' : job.status === 'doing' ? '🛠 กำลังซ่อม' : '⏳ รอรับเรื่อง'}</span></td>
+                                <td style={{textAlign: 'center'}}><button className="btn-sm btn-primary" onClick={() => navigate(`/job/${job.id}`)}>อัปเดตงาน</button></td>
                             </tr>
                         ))}
-                         {jobs.length === 0 && <tr><td colSpan="7" style={{textAlign:'center', padding:'30px', color:'#888'}}>คุณยังไม่มีงานที่รับผิดชอบ</td></tr>}
+                         {jobs.length === 0 && <tr><td colSpan="8" style={{textAlign:'center', padding:'30px', color:'#888'}}>คุณยังไม่มีงานที่รับผิดชอบ</td></tr>}
                     </tbody>
                 </table>
             </div>

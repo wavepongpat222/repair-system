@@ -7,6 +7,10 @@ function UserManagement() {
     const [users, setUsers] = useState([]);
     const navigate = useNavigate();
 
+    // --- ส่วนของ Popup ยืนยันการลบ (เพิ่มใหม่) ---
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteId, setDeleteId] = useState(null); // เก็บ ID ที่จะลบไว้ชั่วคราว
+
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'admin') {
@@ -23,15 +27,32 @@ function UserManagement() {
             .catch(err => console.log(err));
     }
 
-    const handleDelete = (id) => {
-        if(!window.confirm("คุณแน่ใจไหมว่าจะลบผู้ใช้นี้? (กู้คืนไม่ได้)")) return;
-        axios.delete('http://localhost:3001/delete-user/' + id)
+    // 1. เมื่อกดปุ่มถังขยะ: แค่เก็บ ID และเปิด Popup (ยังไม่ลบจริง)
+    const handleClickDelete = (id) => {
+        setDeleteId(id);
+        setShowDeleteModal(true);
+    }
+
+    // 2. เมื่อกด "ยืนยัน" ใน Popup: ค่อยยิง API ลบ
+    const confirmDelete = () => {
+        axios.delete('http://localhost:3001/delete-user/' + deleteId)
             .then(res => {
-                if(res.data === "Success") fetchUsers();
+                if(res.data === "Success") {
+                    fetchUsers(); // รีเฟรชข้อมูล
+                    setShowDeleteModal(false); // ปิด Popup
+                    setDeleteId(null); // ล้าง ID
+                }
             })
             .catch(err => console.log(err));
     }
 
+    // 3. เมื่อกด "ยกเลิก": ปิด Popup เฉยๆ
+    const cancelDelete = () => {
+        setShowDeleteModal(false);
+        setDeleteId(null);
+    }
+
+    // ฟังก์ชันอื่นๆ (เหมือนเดิม)
     const handleResetPassword = (id, username) => {
         const newPass = prompt(`ตั้งรหัสผ่านใหม่สำหรับ "${username}":`, "1234");
         if (!newPass) return;
@@ -72,7 +93,7 @@ function UserManagement() {
     }
 
     return (
-        <div className="container">
+        <div className="container" style={{marginTop: '20px'}}>
             <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2>👥 จัดการบัญชีผู้ใช้งาน</h2>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -113,13 +134,61 @@ function UserManagement() {
                                 <td className="no-print" style={{textAlign: 'center'}}>
                                     <button onClick={() => handleEdit(u)} style={{marginRight: '5px', cursor: 'pointer', background:'none', border:'none', fontSize: '1.2rem'}}>✏️</button>
                                     <button onClick={() => handleResetPassword(u.user_id, u.username)} style={{marginRight: '5px', cursor: 'pointer', background:'none', border:'none', fontSize: '1.2rem'}} title="รีเซ็ตรหัส">🔑</button>
-                                    <button onClick={() => handleDelete(u.user_id)} style={{cursor: 'pointer', background:'none', border:'none', color: 'red', fontSize: '1.2rem'}}>🗑️</button>
+                                    
+                                    {/* เปลี่ยนตรงนี้: เรียกใช้ handleClickDelete แทน */}
+                                    {u.username !== JSON.parse(localStorage.getItem('user'))?.username && (
+                                        <button onClick={() => handleClickDelete(u.user_id)} style={{cursor: 'pointer', background:'none', border:'none', color: 'red', fontSize: '1.2rem'}} title="ลบ">🗑️</button>
+                                    )}
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* --- 🔴 ส่วน Popup Modal ยืนยันการลบ (เพิ่มใหม่) --- */}
+            {showDeleteModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)', // พื้นหลังสีดำจางๆ
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', 
+                    zIndex: 1000 // ให้ลอยอยู่บนสุด
+                }}>
+                    <div style={{ 
+                        backgroundColor: 'white', 
+                        padding: '30px', 
+                        borderRadius: '12px', 
+                        width: '350px', 
+                        boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
+                        textAlign: 'center'
+                    }}>
+                        <div style={{fontSize: '3rem', marginBottom: '10px'}}>⚠️</div>
+                        <h3 style={{color: '#333', marginTop: 0}}>ยืนยันการลบ?</h3>
+                        <p style={{color: '#666', marginBottom: '25px'}}>คุณต้องการลบผู้ใช้นี้ใช่หรือไม่?<br/>การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+                        
+                        <div style={{display: 'flex', gap: '10px', justifyContent: 'center'}}>
+                            <button 
+                                onClick={confirmDelete} 
+                                style={{
+                                    backgroundColor: '#ef4444', color: 'white', border: 'none', 
+                                    padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontSize: '1rem'
+                                }}
+                            >
+                                ลบข้อมูล
+                            </button>
+                            <button 
+                                onClick={cancelDelete} 
+                                style={{
+                                    backgroundColor: '#e5e7eb', color: '#374151', border: 'none', 
+                                    padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontSize: '1rem'
+                                }}
+                            >
+                                ยกเลิก
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 @media print {
@@ -128,6 +197,8 @@ function UserManagement() {
                     .card { box-shadow: none; border: none; }
                     .container { max-width: 100%; width: 100%; margin: 0; padding: 0; }
                     @page { margin: 2cm; }
+                    /* ซ่อนปุ่มในตารางตอนพิมพ์ */
+                    td button { display: none !important; }
                 }
             `}</style>
         </div>
