@@ -11,16 +11,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// เปิดให้เข้าถึงไฟล์รูปภาพ
 app.use('/uploads', express.static('uploads'));
 
+// ตั้งค่า Database
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'repair_system',
-    port: process.env.DB_PORT || 3306
+    port: process.env.DB_PORT || 3306 
 });
 
+// ตั้งค่าการอัปโหลดไฟล์
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const dir = './uploads';
@@ -52,23 +55,49 @@ app.post('/login', (req, res) => {
     });
 });
 
-// ✅ ปรับปรุง: เพิ่มผู้ใช้ใหม่ (ดักจับ Error ชื่อซ้ำ)
 app.post('/add-user', (req, res) => {
-    const { username, password, first_name, last_name, role } = req.body;
+    const { username, password, first_name, last_name, role, email } = req.body;
     bcrypt.hash(password, 10, (err, hash) => {
         if(err) return res.json("Error Hashing");
-        const sql = "INSERT INTO personnel (username, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)";
-        db.query(sql, [username, hash, first_name, last_name, role], (err, result) => {
+        const sql = "INSERT INTO personnel (username, password, first_name, last_name, role, email) VALUES (?, ?, ?, ?, ?, ?)";
+        db.query(sql, [username, hash, first_name, last_name, role, email], (err, result) => {
             if(err) {
-                // ถ้า Database ฟ้องว่าข้อมูลซ้ำ (Error Code: ER_DUP_ENTRY)
                 if (err.code === 'ER_DUP_ENTRY') {
-                    return res.json("Username Already Exists"); 
+                    if (err.sqlMessage.includes('email')) return res.json("Email Already Exists");
+                    return res.json("Username Already Exists");
                 }
                 return res.json(err);
             }
             return res.json("Success");
         });
     });
+});
+
+app.put('/update-user', (req, res) => {
+    const { user_id, password, first_name, last_name, role, email } = req.body;
+    
+    if (password && password.trim() !== "") {
+        bcrypt.hash(password, 10, (err, hash) => {
+            if(err) return res.json("Error Hashing");
+            const sql = "UPDATE personnel SET password = ?, first_name = ?, last_name = ?, role = ?, email = ? WHERE user_id = ?";
+            db.query(sql, [hash, first_name, last_name, role, email, user_id], (err, result) => {
+                if(err) {
+                    if (err.code === 'ER_DUP_ENTRY') return res.json("Email Already Exists");
+                    return res.json(err);
+                } 
+                return res.json("Success");
+            });
+        });
+    } else {
+        const sql = "UPDATE personnel SET first_name = ?, last_name = ?, role = ?, email = ? WHERE user_id = ?";
+        db.query(sql, [first_name, last_name, role, email, user_id], (err, result) => {
+            if(err) {
+                if (err.code === 'ER_DUP_ENTRY') return res.json("Email Already Exists");
+                return res.json(err);
+            }
+            return res.json("Success");
+        });
+    }
 });
 
 app.put('/change-password', (req, res) => {
@@ -87,72 +116,27 @@ app.put('/change-password', (req, res) => {
     });
 });
 
-app.put('/reset-password', (req, res) => {
-    const { user_id, newPassword } = req.body;
-    bcrypt.hash(newPassword, 10, (err, hash) => {
-        if(err) return res.json("Error Hashing");
-        db.query("UPDATE personnel SET password = ? WHERE user_id = ?", [hash, user_id], (err, result) => {
-            if(err) return res.json(err); return res.json("Success");
-        });
-    });
-});
-
-app.get('/users', (req, res) => {
-    db.query("SELECT user_id, username, first_name, last_name, role FROM personnel ORDER BY user_id ASC", (err, result) => {
-        if(err) return res.json(err); return res.json(result);
-    });
-});
-
 app.delete('/delete-user/:id', (req, res) => {
     db.query("DELETE FROM personnel WHERE user_id = ?", [req.params.id], (err, result) => {
         if(err) return res.json(err); return res.json("Success");
     });
 });
 
-// ✅ ปรับปรุง: แก้ไขข้อมูลผู้ใช้ (ตัด Username ออกจากการแก้ไข)
-app.put('/update-user', (req, res) => {
-    // รับค่ามา แต่ไม่เอา username มาใช้ใน SQL
-    const { user_id, password, first_name, last_name, role } = req.body;
-    
-    if (password && password.trim() !== "") {
-        // กรณีมีการเปลี่ยนรหัสผ่านด้วย
-        bcrypt.hash(password, 10, (err, hash) => {
-            if(err) return res.json("Error Hashing");
-            const sql = "UPDATE personnel SET password = ?, first_name = ?, last_name = ?, role = ? WHERE user_id = ?";
-            db.query(sql, [hash, first_name, last_name, role, user_id], (err, result) => {
-                if(err) return res.json(err); return res.json("Success");
-            });
-        });
-    } else {
-        // กรณีแก้แค่ชื่อ/ตำแหน่ง (ไม่แตะต้อง Username และ Password)
-        const sql = "UPDATE personnel SET first_name = ?, last_name = ?, role = ? WHERE user_id = ?";
-        db.query(sql, [first_name, last_name, role, user_id], (err, result) => {
-            if(err) return res.json(err); return res.json("Success");
-        });
-    }
+app.get('/users', (req, res) => {
+    db.query("SELECT user_id, username, first_name, last_name, role, email FROM personnel ORDER BY user_id ASC", (err, result) => {
+        if(err) return res.json(err); return res.json(result);
+    });
 });
 
 app.get('/technicians', (req, res) => {
     db.query("SELECT user_id AS id, username, first_name, last_name FROM personnel WHERE role = 'technician'", (err, result) => {
-        if(err) return res.json(err); return res.json(result); 
-    });
-});
-
-app.get('/technician-jobs/:id', (req, res) => {
-    const sql = `
-        SELECT r.*, p.first_name AS reporter_first_name, p.last_name AS reporter_last_name
-        FROM repair_request r
-        LEFT JOIN personnel p ON r.reporter_id = p.user_id
-        WHERE r.technician_id = ? 
-        ORDER BY r.date_created DESC
-    `;
-    db.query(sql, [req.params.id], (err, data) => {
-        if(err) return res.json(err); return res.json(data);
+        if(err) return res.json(err); 
+        return res.json(result); 
     });
 });
 
 // ==========================================
-// 2. ZONE: REPAIR REQUESTS
+// 2. ZONE: REPAIR REQUESTS (งานซ่อม)
 // ==========================================
 
 app.post('/add-repair', upload.single('repair_image'), (req, res) => {
@@ -184,15 +168,55 @@ app.get('/my-repairs/:id', (req, res) => {
     });
 });
 
-app.get('/repair/:id', (req, res) => {
+app.get('/technician-jobs/:id', (req, res) => {
     const sql = `
         SELECT r.*, p.first_name AS reporter_first_name, p.last_name AS reporter_last_name
         FROM repair_request r
         LEFT JOIN personnel p ON r.reporter_id = p.user_id
+        WHERE r.technician_id = ? 
+        ORDER BY r.date_created DESC
+    `;
+    db.query(sql, [req.params.id], (err, data) => {
+        if(err) return res.json(err); return res.json(data);
+    });
+});
+
+app.get('/job/:id', (req, res) => {
+    const id = req.params.id;
+    const sql = `
+        SELECT r.*, p.first_name AS reporter_first_name, p.last_name AS reporter_last_name, p.role AS reporter_role 
+        FROM repair_request r 
+        LEFT JOIN personnel p ON r.reporter_id = p.user_id 
         WHERE r.id = ?
     `;
-    db.query(sql, [req.params.id], (err, result) => {
-        if(err) return res.json(err); return res.json(result[0]);
+    db.query(sql, [id], (err, result) => {
+        if(err) { console.log(err); return res.json({Error: "Error fetching job"}); }
+        return res.json(result);
+    });
+});
+
+app.put('/update-job', upload.single('repair_image'), (req, res) => {
+    const { id, status } = req.body;
+    let sql = "UPDATE repair_request SET status = ? WHERE id = ?";
+    let params = [status, id];
+
+    if (req.file) {
+        sql = "UPDATE repair_request SET status = ?, repair_image = ? WHERE id = ?";
+        params = [status, req.file.filename, id];
+    }
+
+    db.query(sql, params, (err, result) => {
+        if(err) return res.json(err); 
+        return res.json("Success");
+    });
+});
+
+app.put('/delete-job-image', (req, res) => {
+    const { id } = req.body;
+    const sql = "UPDATE repair_request SET repair_image = NULL WHERE id = ?";
+    db.query(sql, [id], (err, result) => {
+        if(err) return res.json(err);
+        return res.json("Success");
     });
 });
 
@@ -200,26 +224,6 @@ app.put('/assign-job', (req, res) => {
     const { repair_id, technician_id } = req.body;
     const sql = "UPDATE repair_request SET technician_id = ?, status = 'doing' WHERE id = ?";
     db.query(sql, [technician_id, repair_id], (err, result) => {
-        if(err) return res.json(err); return res.json("Success");
-    });
-});
-
-app.put('/update-status/:id', (req, res) => {
-    const sql = "UPDATE repair_request SET status = ? WHERE id = ?";
-    db.query(sql, [req.body.status, req.params.id], (err, result) => {
-        if(err) return res.json(err); return res.json("Success");
-    });
-});
-
-app.put('/update-repair-job', upload.single('image_after'), (req, res) => {
-    const { id, repair_details, status } = req.body;
-    let sql = "UPDATE repair_request SET repair_details = ?, status = ? WHERE id = ?";
-    let params = [repair_details, status, id];
-    if (req.file) {
-        sql = "UPDATE repair_request SET repair_details = ?, status = ?, repair_image_after = ? WHERE id = ?";
-        params = [repair_details, status, req.file.filename, id];
-    }
-    db.query(sql, params, (err, result) => {
         if(err) return res.json(err); return res.json("Success");
     });
 });
@@ -237,27 +241,67 @@ app.delete('/delete-repair/:id', (req, res) => {
     });
 });
 
+
 // ==========================================
-// 3. ZONE: INVENTORY & WITHDRAWAL
+// 3. ZONE: INVENTORY & WITHDRAWAL (คลังวัสดุ)
 // ==========================================
 
 app.get('/materials', (req, res) => {
-    db.query("SELECT * FROM materials", (err, result) => {
+    db.query("SELECT * FROM materials ORDER BY material_name ASC", (err, result) => {
         if(err) return res.json(err); return res.json(result);
     });
 });
 
+// ✅ เพิ่มวัสดุใหม่ (เพิ่ม .trim() และส่ง Duplicate Name)
 app.post('/add-material', (req, res) => {
+    console.log("-----------------------------------------");
+    console.log("👉 1. ได้รับคำขอเพิ่มวัสดุ:", req.body);
+    
     const { name, qty, unit } = req.body;
-    db.query("INSERT INTO materials (material_name, quantity, unit) VALUES (?, ?, ?)", [name, qty, unit], (err, result) => {
-        if(err) return res.json(err); return res.json("Success");
+    const cleanName = name.trim();
+    console.log("👉 2. ชื่อที่ตรวจสอบ (ตัดช่องว่างแล้ว):", `'${cleanName}'`);
+
+    // 1. เช็คชื่อซ้ำ
+    db.query("SELECT * FROM materials WHERE material_name = ?", [cleanName], (err, result) => {
+        if(err) {
+            console.log("❌ 3. เกิด Error ตอนค้นหา:", err);
+            return res.json(err);
+        }
+        
+        console.log("👉 3. ผลการค้นหาใน DB:", result); // ดูว่าเจอซ้ำไหม?
+
+        if(result.length > 0) {
+            console.log("⛔ 4. เจอซ้ำ! กำลังส่ง 'Duplicate Name' กลับไป...");
+            return res.json("Duplicate Name"); // ❌ เจอชื่อซ้ำ!
+        }
+
+        console.log("✅ 4. ไม่ซ้ำ! กำลังบันทึก...");
+        // 2. ถ้าไม่ซ้ำ ให้บันทึก
+        db.query("INSERT INTO materials (material_name, quantity, unit) VALUES (?, ?, ?)", [cleanName, qty, unit], (err, result) => {
+            if(err) {
+                console.log("❌ 5. Error ตอนบันทึก:", err);
+                return res.json(err);
+            }
+            console.log("✅ 5. บันทึกสำเร็จ!");
+            return res.json("Success");
+        });
     });
 });
 
+// ✅ แก้ไขวัสดุ (เพิ่ม .trim() และส่ง Duplicate Name)
 app.put('/update-material', (req, res) => {
     const { id, name, quantity, unit } = req.body;
-    db.query("UPDATE materials SET material_name = ?, quantity = ?, unit = ? WHERE id = ?", [name, quantity, unit, id], (err, result) => {
-        if(err) return res.json(err); return res.json("Success");
+    const cleanName = name.trim(); // ตัดช่องว่าง
+
+    // 1. เช็คชื่อซ้ำ (ห้ามซ้ำกับคนอื่น)
+    db.query("SELECT * FROM materials WHERE material_name = ? AND id != ?", [cleanName, id], (err, result) => {
+        if(err) return res.json(err);
+        if(result.length > 0) return res.json("Duplicate Name"); // ❌ เจอชื่อซ้ำ!
+
+        // 2. อัปเดตข้อมูล
+        db.query("UPDATE materials SET material_name = ?, quantity = ?, unit = ? WHERE id = ?", [cleanName, quantity, unit, id], (err, result) => {
+            if(err) return res.json(err); return res.json("Success");
+        });
     });
 });
 
@@ -275,6 +319,26 @@ app.post('/request-material', (req, res) => {
     });
 });
 
+app.delete('/delete-withdrawal/:id', (req, res) => {
+    db.query("DELETE FROM withdrawal_requests WHERE id = ? AND status = 'pending'", [req.params.id], (err, result) => {
+        if(err) return res.json(err); return res.json("Success");
+    });
+});
+
+app.get('/my-withdrawals/:id', (req, res) => {
+    const id = req.params.id;
+    const sql = `
+        SELECT w.id, w.date_requested, m.material_name, w.quantity, m.unit, w.status 
+        FROM withdrawal_requests w 
+        JOIN materials m ON w.material_id = m.id 
+        WHERE w.technician_id = ? 
+        ORDER BY w.date_requested DESC
+    `;
+    db.query(sql, [id], (err, result) => {
+        if(err) return res.json(err); return res.json(result);
+    });
+});
+
 app.get('/all-withdrawal-requests', (req, res) => {
     const sql = `
         SELECT w.*, m.material_name, m.unit, p.first_name, p.last_name, r.device_name
@@ -289,26 +353,21 @@ app.get('/all-withdrawal-requests', (req, res) => {
     });
 });
 
-app.get('/job-materials/:repairId', (req, res) => {
-    const sql = `
-        SELECT w.*, m.material_name, m.unit 
-        FROM withdrawal_requests w
-        JOIN materials m ON w.material_id = m.id
-        WHERE w.repair_id = ?
-        ORDER BY w.date_requested DESC
-    `;
-    db.query(sql, [req.params.repairId], (err, result) => {
-        if(err) return res.json(err); return res.json(result);
+app.put('/supervisor-approve', (req, res) => {
+    const { id } = req.body;
+    db.query("UPDATE withdrawal_requests SET status = 'approved_by_sup' WHERE id = ?", [id], (err, result) => {
+        if(err) return res.json(err); return res.json("Success");
     });
 });
 
-app.put('/supervisor-approve', (req, res) => {
+app.put('/inventory-confirm', (req, res) => {
     const { id } = req.body;
     db.query("SELECT * FROM withdrawal_requests WHERE id = ?", [id], (err, requests) => {
         if(err) return res.json(err);
         if(requests.length === 0) return res.json("Not Found");
         
         const reqData = requests[0];
+
         db.query("SELECT quantity FROM materials WHERE id = ?", [reqData.material_id], (err, materials) => {
             if(err) return res.json(err);
             if(materials.length === 0) return res.json("Material Not Found");
@@ -316,18 +375,11 @@ app.put('/supervisor-approve', (req, res) => {
 
             db.query("UPDATE materials SET quantity = quantity - ? WHERE id = ?", [reqData.quantity, reqData.material_id], (err, result) => {
                 if(err) return res.json(err);
-                db.query("UPDATE withdrawal_requests SET status = 'approved_by_sup' WHERE id = ?", [id], (err, result) => {
+                db.query("UPDATE withdrawal_requests SET status = 'completed' WHERE id = ?", [id], (err, result) => {
                     if(err) return res.json(err); return res.json("Success");
                 });
             });
         });
-    });
-});
-
-app.put('/inventory-confirm', (req, res) => {
-    const { id } = req.body;
-    db.query("UPDATE withdrawal_requests SET status = 'approved' WHERE id = ?", [id], (err, result) => {
-        if(err) return res.json(err); return res.json("Success");
     });
 });
 

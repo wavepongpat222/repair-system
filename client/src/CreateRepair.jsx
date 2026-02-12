@@ -10,12 +10,21 @@ function CreateRepair() {
     const [file, setFile] = useState(null);
     const navigate = useNavigate();
 
+    // --- State สำหรับ Popup ---
+    const [showConfirmModal, setShowConfirmModal] = useState(false); // ยืนยันก่อนส่ง
+    const [showSuccessModal, setShowSuccessModal] = useState(false); // แจ้งเตือนสำเร็จ
+
     const handleSubmit = (e) => {
         e.preventDefault();
         
         if (device === "") { alert("กรุณาเลือกชื่ออุปกรณ์"); return; }
         if (location === "") { alert("กรุณาเลือกสถานที่"); return; }
 
+        // เปิด Popup ยืนยันก่อน
+        setShowConfirmModal(true);
+    }
+
+    const confirmSubmit = () => {
         const user = JSON.parse(localStorage.getItem('user'));
         if(!user) {
             alert("กรุณา Login ใหม่");
@@ -38,14 +47,18 @@ function CreateRepair() {
         })
         .then(res => {
             if(res.data === "Success") {
-                alert("แจ้งซ่อมสำเร็จ ✅");
-                // ✅ แก้ไขตรงนี้: บันทึกเสร็จให้ไปหน้า "ประวัติ" (ถ้าไป dashboard จะโดนเด้งออก)
-                navigate('/history'); 
+                setShowConfirmModal(false); // ปิด Popup ยืนยัน
+                setShowSuccessModal(true);  // เปิด Popup สำเร็จ
             } else {
                 alert("เกิดข้อผิดพลาด");
             }
         })
         .catch(err => console.log(err));
+    }
+
+    const handleCloseSuccess = () => {
+        setShowSuccessModal(false);
+        navigate('/history'); // กด OK แล้วไปหน้าประวัติ
     }
 
     return (
@@ -99,8 +112,39 @@ function CreateRepair() {
                     </div>
                 </form>
             </div>
+
+            {/* --- Popup 1: ยืนยันก่อนส่ง (เหมือน Admin) --- */}
+            {showConfirmModal && (
+                <div className="modal-overlay" style={modalOverlayStyle}>
+                    <div className="modal-box" style={modalBoxStyle}>
+                        <div style={{fontSize: '3rem', marginBottom: '10px'}}>📝</div>
+                        <h3 style={{marginTop: 0, color:'#333'}}>ยืนยันการแจ้งซ่อม?</h3>
+                        <p style={{color: '#666', marginBottom: '25px'}}>ตรวจสอบข้อมูลถูกต้องแล้วใช่หรือไม่?</p>
+                        <div style={{display: 'flex', gap: '10px'}}>
+                            <button onClick={confirmSubmit} style={{flex: 1, backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize:'1rem'}}>ยืนยัน</button>
+                            <button onClick={() => setShowConfirmModal(false)} style={{flex: 1, backgroundColor: '#e5e7eb', color: '#374151', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize:'1rem'}}>แก้ไข</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- Popup 2: แจ้งเตือนสำเร็จ --- */}
+            {showSuccessModal && (
+                <div className="modal-overlay" style={modalOverlayStyle}>
+                    <div className="modal-box" style={modalBoxStyle}>
+                        <div style={{fontSize: '3rem', marginBottom: '10px'}}>✅</div>
+                        <h3 style={{marginTop: 0, color:'#333'}}>แจ้งซ่อมเรียบร้อย!</h3>
+                        <p style={{color: '#666', marginBottom: '25px'}}>เจ้าหน้าที่ได้รับข้อมูลแล้ว</p>
+                        <button onClick={handleCloseSuccess} style={{width: '100%', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize:'1rem'}}>ตกลง</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
+// Style
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' };
+const modalBoxStyle = { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '90%', maxWidth: '350px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease-out' };
 
 export default CreateRepair;

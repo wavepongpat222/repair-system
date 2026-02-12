@@ -4,41 +4,52 @@ import { useNavigate } from 'react-router-dom';
 import './App.css';
 
 function AddUser() {
-    // 1. ประกาศตัวแปร State ให้ครบ
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState(''); // <--- ตัวแปรสำหรับเช็คยืนยัน
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [role, setRole] = useState('user');
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(''); // ✅ เพิ่ม state email
     
     const navigate = useNavigate();
+
+    // ✅ ฟังก์ชันเช็คว่ามีตัวเลขปนไหม (Regular Expression)
+    const hasNumber = (str) => /\d/.test(str);
 
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // 2. เช็คว่ารหัสผ่านตรงกันไหมก่อนส่ง
-        if (password !== confirmPassword) {
-            alert("❌ รหัสผ่านยืนยันไม่ตรงกัน! กรุณากรอกใหม่");
-            return; // หยุดทำงานทันที ไม่ส่งข้อมูลไป Server
+        // 1. เช็คชื่อ-นามสกุล ห้ามมีตัวเลข
+        if (hasNumber(firstName) || hasNumber(lastName)) {
+            alert("❌ ชื่อและนามสกุลต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข");
+            return;
         }
 
-        // ส่งข้อมูลไปหลังบ้าน
+        // 2. เช็ค Password ตรงกันไหม
+        if (password !== confirmPassword) {
+            alert("❌ รหัสผ่านยืนยันไม่ตรงกัน! กรุณากรอกใหม่");
+            return;
+        }
+
         axios.post('http://localhost:3001/add-user', {
             username, 
             password, 
             first_name: firstName, 
             last_name: lastName, 
             role, 
-            email
+            email // ✅ ส่ง email ไปด้วย
         })
         .then(res => {
             if(res.data === "Success") {
                 alert("✅ เพิ่มผู้ใช้เรียบร้อย");
                 navigate('/admin-dashboard'); 
+            } else if (res.data === "Username Already Exists") {
+                alert("❌ Username นี้มีผู้ใช้แล้ว");
+            } else if (res.data === "Email Already Exists") {
+                alert("❌ Email นี้มีในระบบแล้ว ห้ามซ้ำ!");
             } else {
-                alert("เกิดข้อผิดพลาด (Username อาจซ้ำ)");
+                alert("เกิดข้อผิดพลาด");
             }
         })
         .catch(err => console.log(err));
@@ -53,18 +64,19 @@ function AddUser() {
                     
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>ชื่อจริง</label>
+                            <label>ชื่อจริง (ห้ามตัวเลข)</label>
                             <input type="text" className="form-control" required onChange={e => setFirstName(e.target.value)} />
                         </div>
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>นามสกุล</label>
+                            <label>นามสกุล (ห้ามตัวเลข)</label>
                             <input type="text" className="form-control" required onChange={e => setLastName(e.target.value)} />
                         </div>
                     </div>
 
+                    {/* ✅ เพิ่มช่องกรอก Email */}
                     <div className="form-group">
-                        <label>อีเมล</label>
-                        <input type="email" className="form-control" onChange={e => setEmail(e.target.value)} placeholder="name@example.com" />
+                        <label>อีเมล (ห้ามซ้ำ)</label>
+                        <input type="email" className="form-control" required onChange={e => setEmail(e.target.value)} placeholder="name@example.com" />
                     </div>
 
                     <div className="form-group">
@@ -72,47 +84,28 @@ function AddUser() {
                         <input type="text" className="form-control" required onChange={e => setUsername(e.target.value)} />
                     </div>
 
-                    {/* ส่วนรหัสผ่าน (Password) */}
                     <div className="form-group">
                         <label>Password (รหัสผ่าน)</label>
-                        <input 
-                            type="password" 
-                            className="form-control" 
-                            required 
-                            onChange={e => setPassword(e.target.value)} // เก็บค่าเข้าตัวแปร password
-                        />
+                        <input type="password" className="form-control" required onChange={e => setPassword(e.target.value)} />
                     </div>
 
-                    {/* ส่วนยืนยันรหัสผ่าน (Confirm Password) */}
                     <div className="form-group">
-                        <label>Confirm Password (ยืนยันรหัสผ่าน)</label>
+                        <label>Confirm Password</label>
                         <input 
                             type="password" 
                             className="form-control" 
                             required 
-                            onChange={e => setConfirmPassword(e.target.value)} // เก็บค่าเข้าตัวแปร confirmPassword
-                            
-                            // ลูกเล่น: ถ้าพิมพ์ไม่ตรงกัน ขอบช่องจะเป็นสีแดง
-                            style={{ 
-                                borderColor: (confirmPassword && password !== confirmPassword) ? 'red' : '#ccc' 
-                            }}
+                            onChange={e => setConfirmPassword(e.target.value)}
+                            style={{ borderColor: (confirmPassword && password !== confirmPassword) ? 'red' : '#ccc' }}
                         />
-                        {/* ข้อความเตือนเล็กๆ สีแดง */}
-                        {confirmPassword && password !== confirmPassword && (
-                            <small style={{ color: 'red', display: 'block', marginTop: '5px' }}>
-                                ❌ รหัสผ่านไม่ตรงกัน
-                            </small>
+                         {confirmPassword && password !== confirmPassword && (
+                            <small style={{ color: 'red' }}>❌ รหัสผ่านไม่ตรงกัน</small>
                         )}
                     </div>
 
                     <div className="form-group">
                         <label>ตำแหน่ง</label>
-                        <select 
-                            onChange={e => setRole(e.target.value)} 
-                            value={role} 
-                            className="form-control" 
-                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
-                        >
+                        <select onChange={e => setRole(e.target.value)} value={role} className="form-control" style={{ width: '100%', padding: '10px' }}>
                             <option value="user">ผู้ใช้งานทั่วไป (User)</option>
                             <option value="technician">ช่าง (Technician)</option>
                             <option value="supervisor">หัวหน้าช่าง (Supervisor)</option>
