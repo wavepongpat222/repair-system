@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
@@ -7,9 +7,8 @@ function UserManagement() {
     const [users, setUsers] = useState([]);
     const navigate = useNavigate();
 
-    // --- ส่วนของ Popup ยืนยันการลบ (เพิ่มใหม่) ---
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteId, setDeleteId] = useState(null); // เก็บ ID ที่จะลบไว้ชั่วคราว
+    const [deleteId, setDeleteId] = useState(null);
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
@@ -19,45 +18,44 @@ function UserManagement() {
             return;
         }
         fetchUsers();
-    }, []);
+    }, [navigate]);
 
     const fetchUsers = () => {
-        axios.get('http://localhost:3001/users')
+        // ✅ เปลี่ยนเป็น api.get
+        api.get('/users')
             .then(res => setUsers(res.data))
             .catch(err => console.log(err));
     }
 
-    // 1. เมื่อกดปุ่มถังขยะ: แค่เก็บ ID และเปิด Popup (ยังไม่ลบจริง)
     const handleClickDelete = (id) => {
         setDeleteId(id);
         setShowDeleteModal(true);
     }
 
-    // 2. เมื่อกด "ยืนยัน" ใน Popup: ค่อยยิง API ลบ
     const confirmDelete = () => {
-        axios.delete('http://localhost:3001/delete-user/' + deleteId)
+        // ✅ เปลี่ยนเป็น api.delete
+        api.delete('/delete-user/' + deleteId)
             .then(res => {
                 if(res.data === "Success") {
-                    fetchUsers(); // รีเฟรชข้อมูล
-                    setShowDeleteModal(false); // ปิด Popup
-                    setDeleteId(null); // ล้าง ID
+                    fetchUsers();
+                    setShowDeleteModal(false);
+                    setDeleteId(null);
                 }
             })
             .catch(err => console.log(err));
     }
 
-    // 3. เมื่อกด "ยกเลิก": ปิด Popup เฉยๆ
     const cancelDelete = () => {
         setShowDeleteModal(false);
         setDeleteId(null);
     }
 
-    // ฟังก์ชันอื่นๆ (เหมือนเดิม)
     const handleResetPassword = (id, username) => {
         const newPass = prompt(`ตั้งรหัสผ่านใหม่สำหรับ "${username}":`, "1234");
         if (!newPass) return;
 
-        axios.put('http://localhost:3001/reset-password', {
+        // ✅ เปลี่ยนเป็น api.put
+        api.put('/reset-password', {
             user_id: id,
             newPassword: newPass
         }).then(res => {
@@ -75,7 +73,8 @@ function UserManagement() {
         const newRole = prompt("แก้ไขตำแหน่ง (user, technician, supervisor, admin):", user.role);
         if(newRole === null) return;
 
-        axios.put('http://localhost:3001/update-user', {
+        // ✅ เปลี่ยนเป็น api.put
+        api.put('/update-user', {
             user_id: user.user_id,
             first_name: newFirst,
             last_name: newLast,
@@ -134,8 +133,6 @@ function UserManagement() {
                                 <td className="no-print" style={{textAlign: 'center'}}>
                                     <button onClick={() => handleEdit(u)} style={{marginRight: '5px', cursor: 'pointer', background:'none', border:'none', fontSize: '1.2rem'}}>✏️</button>
                                     <button onClick={() => handleResetPassword(u.user_id, u.username)} style={{marginRight: '5px', cursor: 'pointer', background:'none', border:'none', fontSize: '1.2rem'}} title="รีเซ็ตรหัส">🔑</button>
-                                    
-                                    {/* เปลี่ยนตรงนี้: เรียกใช้ handleClickDelete แทน */}
                                     {u.username !== JSON.parse(localStorage.getItem('user'))?.username && (
                                         <button onClick={() => handleClickDelete(u.user_id)} style={{cursor: 'pointer', background:'none', border:'none', color: 'red', fontSize: '1.2rem'}} title="ลบ">🗑️</button>
                                     )}
@@ -146,13 +143,12 @@ function UserManagement() {
                 </table>
             </div>
 
-            {/* --- 🔴 ส่วน Popup Modal ยืนยันการลบ (เพิ่มใหม่) --- */}
             {showDeleteModal && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.5)', // พื้นหลังสีดำจางๆ
+                    backgroundColor: 'rgba(0,0,0,0.5)',
                     display: 'flex', justifyContent: 'center', alignItems: 'center', 
-                    zIndex: 1000 // ให้ลอยอยู่บนสุด
+                    zIndex: 1000 
                 }}>
                     <div style={{ 
                         backgroundColor: 'white', 
@@ -197,7 +193,6 @@ function UserManagement() {
                     .card { box-shadow: none; border: none; }
                     .container { max-width: 100%; width: 100%; margin: 0; padding: 0; }
                     @page { margin: 2cm; }
-                    /* ซ่อนปุ่มในตารางตอนพิมพ์ */
                     td button { display: none !important; }
                 }
             `}</style>

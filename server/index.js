@@ -5,14 +5,16 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const nodemailer = require('nodemailer'); // ✅ 1. เพิ่ม Nodemailer
+const nodemailer = require('nodemailer'); 
 const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
+// ✅ 1. ตั้งค่า CORS ให้เปิดรับทุกโดเมน (ถูกต้องแล้วสำหรับ ngrok)
+app.use(cors()); 
+
+app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 const db = mysql.createConnection({
@@ -36,19 +38,18 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // ==========================================
-// ✅ 2. ตั้งค่าระบบส่งอีเมล (EMAIL CONFIG)
+// EMAIL CONFIG
 // ==========================================
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // ใช้ Gmail
+    service: 'gmail', 
     auth: {
-        user: 'wavepong3@gmail.com', // 🔴 ใส่อีเมลของคุณที่นี่
-        pass: 'yvgi jpok umeo gxhl'     // 🔴 ใส่รหัสผ่าน App Password 16 หลัก (ไม่ใช่รหัสผ่านเข้าเมลปกติ)
+        user: 'wavepong3@gmail.com', 
+        pass: 'yvgi jpok umeo gxhl'
     }
 });
 
-// ฟังก์ชันช่วยส่งอีเมล (Reusable Function)
 const sendEmailNoti = (toEmail, subject, text) => {
-    if (!toEmail) return; // ถ้าไม่มีอีเมลก็ไม่ต้องส่ง
+    if (!toEmail) return; 
     
     const mailOptions = {
         from: 'ระบบแจ้งซ่อม <noreply@repair-system.com>',
@@ -65,7 +66,6 @@ const sendEmailNoti = (toEmail, subject, text) => {
         }
     });
 };
-
 
 // ==========================================
 // AUTH & USER
@@ -168,7 +168,6 @@ app.get('/technicians', (req, res) => {
 // ZONE: REPAIR REQUESTS (งานซ่อม)
 // ==========================================
 
-// ✅ Case 2: แจ้งเตือน Supervisor เมื่อมีการแจ้งซ่อมใหม่
 app.post('/add-repair', upload.single('repair_image'), (req, res) => {
     const { user_id, device_name, problem_detail, location } = req.body;
     const image_filename = req.file ? req.file.filename : null;
@@ -177,7 +176,6 @@ app.post('/add-repair', upload.single('repair_image'), (req, res) => {
     db.query(sql, [device_name, problem_detail, location, user_id, image_filename], (err, result) => {
         if(err) { console.log(err); return res.json("Error"); }
 
-        // --- 📧 ส่งอีเมลหา Supervisor ทุกคน ---
         db.query("SELECT email FROM personnel WHERE role = 'supervisor'", (err, supervisors) => {
             if (!err && supervisors.length > 0) {
                 supervisors.forEach(sup => {
@@ -240,7 +238,6 @@ app.get('/job/:id', (req, res) => {
     });
 });
 
-// ✅ Case 3: แจ้งเตือนผู้แจ้ง (User) เมื่อซ่อมเสร็จ
 app.put('/update-job', upload.single('repair_image'), (req, res) => {
     const { id, status } = req.body;
     let sql = "UPDATE repair_request SET status = ? WHERE id = ?";
@@ -254,9 +251,7 @@ app.put('/update-job', upload.single('repair_image'), (req, res) => {
     db.query(sql, params, (err, result) => {
         if(err) return res.json(err); 
 
-        // --- 📧 ถ้าสถานะเป็น 'done' ให้ส่งเมลหาผู้แจ้ง ---
         if (status === 'done') {
-            // ต้อง Query หาอีเมลผู้แจ้ง จาก job id
             const q = `
                 SELECT p.email, r.device_name 
                 FROM repair_request r 
@@ -289,14 +284,12 @@ app.put('/delete-job-image', (req, res) => {
     });
 });
 
-// ✅ Case 1: แจ้งเตือนช่าง (Technician) เมื่อได้รับมอบหมายงาน
 app.put('/assign-job', (req, res) => {
     const { repair_id, technician_id } = req.body;
     const sql = "UPDATE repair_request SET technician_id = ?, status = 'doing' WHERE id = ?";
     db.query(sql, [technician_id, repair_id], (err, result) => {
         if(err) return res.json(err); 
 
-        // --- 📧 ส่งอีเมลหาช่างคนนั้น ---
         db.query("SELECT email, first_name FROM personnel WHERE user_id = ?", [technician_id], (err, techData) => {
             if (!err && techData.length > 0) {
                 const techEmail = techData[0].email;
@@ -326,9 +319,8 @@ app.delete('/delete-repair/:id', (req, res) => {
     });
 });
 
-
 // ==========================================
-// 3. ZONE: INVENTORY & WITHDRAWAL (คลังวัสดุ)
+// ZONE: INVENTORY
 // ==========================================
 
 app.get('/materials', (req, res) => {
@@ -451,35 +443,27 @@ app.put('/reject-withdrawal', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
 // ==========================================
 // ZONE: FORGOT PASSWORD
 // ==========================================
 
-// 1. ขอรีเซรหัสผ่าน (ส่งลิงก์ไปอีเมล)
 app.post('/forgot-password', (req, res) => {
     const { email } = req.body;
     
-    // 1. เช็คว่ามีอีเมลนี้ในระบบไหม
     db.query("SELECT * FROM personnel WHERE email = ?", [email], (err, result) => {
         if(err) return res.json(err);
         if(result.length === 0) return res.json("User Not Found");
 
-        // 2. สร้าง Token สุ่ม และ วันหมดอายุ (1 ชั่วโมง)
         const token = crypto.randomBytes(20).toString('hex');
-        const expireDate = new Date(Date.now() + 3600000); // +1 ชั่วโมง
+        const expireDate = new Date(Date.now() + 3600000); 
 
-        // 3. บันทึก Token ลง DB
         db.query("UPDATE personnel SET reset_token = ?, reset_token_expire = ? WHERE email = ?", 
         [token, expireDate, email], (err, updateRes) => {
             if(err) return res.json(err);
 
-            // 4. ส่งอีเมล (ลิงก์ต้องชี้ไปที่ Frontend port 5173)
-            const resetLink = `http://localhost:5173/reset-password?token=${token}`;
+            // ✅ แก้ไข: ใช้ URL ของ ngrok (Frontend) ที่คุณส่งรูปมาให้
+            // ถ้าคุณปิด/เปิด ngrok ใหม่ เลขข้างหน้าจะเปลี่ยน ต้องมาแก้บรรทัดนี้ใหม่นะครับ
+            const resetLink = `https://480c-2403-6200-8838-a490-7c50-941-d23e-f4b5.ngrok-free.app/reset-password?token=${token}`;
             
             sendEmailNoti(
                 email,
@@ -492,22 +476,18 @@ app.post('/forgot-password', (req, res) => {
     });
 });
 
-// 2. ตั้งรหัสผ่านใหม่ (จากลิงก์)
 app.post('/reset-password', (req, res) => {
     const { token, newPassword } = req.body;
 
-    // 1. ตรวจสอบ Token และวันหมดอายุ
     db.query("SELECT * FROM personnel WHERE reset_token = ? AND reset_token_expire > NOW()", [token], (err, result) => {
         if(err) return res.json(err);
         if(result.length === 0) return res.json("Invalid or Expired Token");
 
         const user = result[0];
 
-        // 2. Hash รหัสผ่านใหม่
         bcrypt.hash(newPassword, 10, (err, hash) => {
             if(err) return res.json("Error Hashing");
 
-            // 3. อัปเดต Password และลบ Token ทิ้ง
             db.query("UPDATE personnel SET password = ?, reset_token = NULL, reset_token_expire = NULL WHERE user_id = ?", 
             [hash, user.user_id], (err, updateRes) => {
                 if(err) return res.json(err);
@@ -517,4 +497,9 @@ app.post('/reset-password', (req, res) => {
     });
 });
 
-module.exports = app; // For Unit Test
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+
+module.exports = app;

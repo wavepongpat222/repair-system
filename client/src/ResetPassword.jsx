@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './App.css';
@@ -17,7 +17,7 @@ function ResetPassword() {
         if (!token) {
             Swal.fire('Error', 'ลิงก์ไม่ถูกต้อง', 'error').then(() => navigate('/login'));
         }
-    }, [token]);
+    }, [token, navigate]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -26,7 +26,8 @@ function ResetPassword() {
             return;
         }
 
-        axios.post('http://localhost:3001/reset-password', { token, newPassword })
+        // ✅ เปลี่ยนเป็น api.post และตัด localhost ออก
+        api.post('/reset-password', { token, newPassword })
             .then(res => {
                 if(res.data === "Success") {
                     Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อย! กรุณาล็อกอินใหม่', 'success')
@@ -36,6 +37,10 @@ function ResetPassword() {
                 } else {
                     Swal.fire('Error', 'เกิดข้อผิดพลาด', 'error');
                 }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อ Server ได้', 'error');
             });
     }
 

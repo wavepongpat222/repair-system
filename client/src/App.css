@@ -420,3 +420,15 @@ input:focus, select:focus, textarea:focus, .form-control:focus, .input-modern:fo
     content: none !important;
   }
 }
+
+/* ✅ บังคับสี Input ให้เหมือนกันทุกเครื่อง (แก้ปัญหา Dark Mode) */
+input, select, textarea, .input-modern {
+    color: #333333 !important;       /* บังคับตัวหนังสือสีดำ */
+    background-color: #ffffff !important; /* บังคับพื้นหลังสีขาว */
+}
+
+/* กรณี Placeholder (ข้อความจางๆ ก่อนพิมพ์) */
+::placeholder {
+    color: #999999 !important;
+    opacity: 1; /* Firefox ต้องการค่านี้ */
+}

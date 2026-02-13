@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
@@ -9,11 +9,10 @@ function InventoryReport() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        axios.get('http://localhost:3001/materials').then(res => setMaterials(res.data));
-        axios.get('http://localhost:3001/all-withdrawal-requests').then(res => setWithdrawals(res.data));
+        // ✅ เปลี่ยนจาก axios.get เป็น api.get และตัด URL ส่วนเกินออก
+        api.get('/materials').then(res => setMaterials(res.data));
+        api.get('/all-withdrawal-requests').then(res => setWithdrawals(res.data));
     }, []);
-
-    
 
     const lowStockItems = materials.filter(m => m.quantity < 5);
 
@@ -21,7 +20,6 @@ function InventoryReport() {
         <div className="container">
             <div className="no-print" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
                 <h2>📊 รายงานสรุปคลังวัสดุอุปกรณ์</h2>
-                
             </div>
 
             <div className="card report-area">
@@ -76,7 +74,10 @@ function InventoryReport() {
                                 <td>{w.first_name} {w.last_name}</td>
                                 <td>{w.material_name}</td>
                                 <td>{w.quantity} {w.unit}</td>
-                                <td>{w.status === 'approved' ? '✅ อนุมัติ' : w.status === 'rejected' ? '❌ ปฏิเสธ' : '⏳ รอ'}</td>
+                                <td>
+                                    {w.status === 'completed' || w.status === 'approved' ? '✅ อนุมัติ' : 
+                                     w.status === 'rejected' ? '❌ ปฏิเสธ' : '⏳ รอ'}
+                                </td>
                             </tr>
                         ))}
                     </tbody>

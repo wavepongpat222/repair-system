@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from './api'; // ✅ เปลี่ยนจาก import axios เป็น api
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './App.css';
@@ -12,9 +12,13 @@ function Login() {
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        axios.post('http://localhost:3001/login', { username, password })
+        // ✅ แก้ตรงนี้: ใช้ api.post และตัด URL ข้างหน้าออก เหลือแค่ /login
+        api.post('/login', { username, password })
             .then(res => {
-                if(res.data.status === "Login Success") {
+                if(res.data === "No Record" || res.data === "Wrong Password") {
+                     // ดัก Error ก่อน เพราะ Backend ส่ง String มา
+                     Swal.fire('ข้อผิดพลาด', 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error');
+                } else if(res.data.status === "Login Success") {
                     localStorage.setItem('user', JSON.stringify(res.data.user));
                     const role = res.data.user.role;
                     
@@ -31,18 +35,20 @@ function Login() {
                          else navigate('/dashboard');
                     });
                 } else {
-                    Swal.fire('ข้อผิดพลาด', 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error');
+                    Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ', 'error');
                 }
             })
-            .catch(err => console.log(err));
+            .catch(err => {
+                console.log(err);
+                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อ Server ได้', 'error');
+            });
     }
 
     const handleForgotPassword = () => {
-        navigate('/forgot-password'); // ✅ ลิ้งค์ไปหน้ากรอกอีเมล
+        navigate('/forgot-password'); 
     }
 
     return (
-        // ✅ ใช้ Class Name ที่ตรงกับ CSS ใหม่
         <div className="login-container">
             <div className="login-card">
                 <div className="login-icon">🔧</div>

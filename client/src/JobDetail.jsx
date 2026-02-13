@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import Swal from 'sweetalert2'; // ✅ Use SweetAlert2
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
+import Swal from 'sweetalert2';
 import './App.css';
 
 function JobDetail() {
@@ -12,6 +12,9 @@ function JobDetail() {
     const [imageFile, setImageFile] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
 
+    // ✅ ดึง URL ของ Backend จาก api.js เพื่อใช้แสดงรูปภาพ
+    const BACKEND_URL = api.defaults.baseURL;
+
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) { navigate('/'); return; }
@@ -20,7 +23,8 @@ function JobDetail() {
     }, [id]);
 
     const fetchJob = () => {
-        axios.get('http://localhost:3001/job/' + id)
+        // ✅ เปลี่ยนเป็น api.get
+        api.get('/job/' + id)
             .then(res => {
                 if (res.data && res.data.length > 0) {
                     setJob(res.data[0]);
@@ -31,10 +35,14 @@ function JobDetail() {
     }
 
     const handleBack = () => {
-        // ✅ แก้ปุ่มย้อนกลับตาม Role
         if (currentUser.role === 'user') navigate('/history');
         else if (currentUser.role === 'technician') navigate('/my-tasks');
-        else navigate('/dashboard'); // Super/Admin ไป Dashboard
+        else navigate('/dashboard');
+    }
+
+    const handleClearNewImage = () => {
+        setImageFile(null);
+        document.getElementById('newFileInput').value = "";
     }
 
     const handleUpdate = () => {
@@ -50,14 +58,14 @@ function JobDetail() {
                 const formData = new FormData();
                 formData.append('id', id);
                 formData.append('status', status);
-                if (imageFile) formData.append('repair_image', imageFile); // ✅ รูปหลังซ่อม (เฉพาะช่าง)
+                if (imageFile) formData.append('repair_image', imageFile);
 
-                axios.put('http://localhost:3001/update-job', formData)
+                // ✅ เปลี่ยนเป็น api.put
+                api.put('/update-job', formData)
                     .then(res => {
                         if(res.data === "Success") {
                             Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success')
                             .then(() => {
-                                // ✅ ช่างบันทึกแล้วเด้งกลับงานของฉัน
                                 if(currentUser.role === 'technician') navigate('/my-tasks'); 
                                 else fetchJob();
                             });
@@ -67,30 +75,8 @@ function JobDetail() {
         });
     }
 
-    const handleDeleteImage = () => {
-        Swal.fire({
-            title: 'ลบรูปภาพ?',
-            text: "คุณต้องการลบรูปภาพนี้ใช่หรือไม่?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'ลบเลย'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                axios.put('http://localhost:3001/delete-job-image', { id: id })
-                    .then(res => { 
-                        if(res.data === "Success") { 
-                            Swal.fire('ลบแล้ว', 'รูปภาพถูกลบเรียบร้อย', 'success');
-                            fetchJob(); 
-                        } 
-                    });
-            }
-        });
-    }
-
     if (!job) return <div>Loading...</div>;
 
-    // ✅ เช็คว่าเป็น User หรือไม่ (ถ้าใช่ ให้เป็น Read-only)
     const isUser = currentUser?.role === 'user';
 
     return (
@@ -99,30 +85,37 @@ function JobDetail() {
                 <h2>🛠️ รายละเอียดงานซ่อม #{job.id}</h2>
                 <hr style={{margin:'20px 0', borderTop:'1px solid #eee'}}/>
                 
-                {/* ข้อมูลทั่วไป (User เห็นเหมือนเดิม) */}
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px'}}>
                     <div>
                         <p><strong>อุปกรณ์:</strong> {job.device_name}</p>
                         <p><strong>อาการ:</strong> {job.problem_detail}</p>
                         <p><strong>สถานที่:</strong> {job.location}</p>
-                        {/* ✅ โชว์รูปตอนแจ้งซ่อม (ถ้ามี) */}
-                        {job.repair_image_before && ( /* ต้องแก้ backend ให้ส่ง repair_image (original) มาด้วย หรือใช้ field เดิม */ 
-                            <div>
-                                <p><strong>รูปแจ้งซ่อม:</strong></p>
-                                <img src={`http://localhost:3001/uploads/${job.repair_image}`} alt="Before" style={{maxWidth:'100%', borderRadius:'8px'}}/>
+                        
+                        {job.repair_image && (
+                            <div style={{marginTop: '15px'}}>
+                                <div style={{marginBottom: '5px'}}>
+                                    <p style={{margin: 0}}><strong>รูปภาพปัจจุบัน:</strong></p>
+                                </div>
+                                {/* ✅ ปรับการแสดงรูปให้ผ่าน URL ของ ngrok */}
+                                <a href={`${BACKEND_URL}/uploads/${job.repair_image}`} target="_blank" rel="noreferrer">
+                                    <img 
+                                        src={`${BACKEND_URL}/uploads/${job.repair_image}`} 
+                                        alt="Repair" 
+                                        style={{maxWidth:'100%', maxHeight:'300px', borderRadius:'8px', border:'1px solid #ddd'}}
+                                    />
+                                </a>
                             </div>
                         )}
                     </div>
                     <div>
                         <p><strong>ผู้แจ้ง:</strong> {job.reporter_first_name} {job.reporter_last_name}</p>
                         <p><strong>วันที่แจ้ง:</strong> {new Date(job.date_created).toLocaleString('th-TH')}</p>
-                        <p><strong>สถานะ:</strong> <span className={`status-badge status-${job.status}`}>{job.status}</span></p>
+                        <p><strong>สถานะ:</strong> <span className={`status-badge status-${job.status}`}>{job.status === 'done' ? '✅ เสร็จสิ้น' : job.status === 'doing' ? '🛠 กำลังซ่อม' : '⏳ รอรับเรื่อง'}</span></p>
                     </div>
                 </div>
 
-                {/* ส่วนดำเนินการ (ซ่อนหรือ Read-only สำหรับ User) */}
                 <div style={{marginTop: '20px', padding:'20px', backgroundColor:'#f8fafc', borderRadius:'8px'}}>
-                    <h3>🔧 การดำเนินการ {isUser ? '(ดูเท่านั้น)' : '(สำหรับช่าง)'}</h3>
+                    <h3>🔧 การดำเนินการ {isUser ? '(สถานะปัจจุบัน)' : '(สำหรับช่าง)'}</h3>
                     
                     <div className="form-group">
                         <label>สถานะงาน</label>
@@ -130,7 +123,7 @@ function JobDetail() {
                             className="input-modern" 
                             value={status} 
                             onChange={(e) => setStatus(e.target.value)}
-                            disabled={isUser} // ✅ User ห้ามแก้
+                            disabled={isUser} 
                         >
                             <option value="pending">⏳ รอรับเรื่อง</option>
                             <option value="doing">🛠 กำลังดำเนินการซ่อม</option>
@@ -138,17 +131,36 @@ function JobDetail() {
                         </select>
                     </div>
 
-                    {!isUser && ( // ✅ User ไม่เห็นช่องอัปโหลดรูปหลังซ่อม
+                    {!isUser && (
                         <div className="form-group">
-                            <label>รูปภาพหลังซ่อม (Update)</label>
-                            {/* Logic รูปภาพเดิม ... */}
-                            {job.repair_image && job.status === 'done' && ( /* สมมติว่าเก็บรูปหลังซ่อมทับรูปเดิม หรือมี field ใหม่ */
-                               <div style={{marginBottom:'10px'}}>
-                                   <img src={`http://localhost:3001/uploads/${job.repair_image}`} width="150"/>
-                                   <button onClick={handleDeleteImage} className="btn-sm btn-logout-red">ลบรูป</button>
-                               </div>
+                            <label>อัปโหลดรูปภาพใหม่ (แทนที่รูปเดิม)</label>
+                            
+                            <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
+                                <input 
+                                    id="newFileInput"
+                                    type="file" 
+                                    className="input-modern" 
+                                    accept="image/*" 
+                                    onChange={(e) => setImageFile(e.target.files[0])} 
+                                />
+                                
+                                {imageFile && (
+                                    <button 
+                                        type="button" 
+                                        onClick={handleClearNewImage}
+                                        className="btn-secondary"
+                                        style={{backgroundColor: '#ef4444', color: 'white', whiteSpace: 'nowrap'}}
+                                    >
+                                        ❌ เอาออก
+                                    </button>
+                                )}
+                            </div>
+                            
+                            {imageFile && (
+                                <small style={{color: 'green', display: 'block', marginTop: '5px'}}>
+                                    * กำลังเลือกไฟล์: {imageFile.name} (กดบันทึกเพื่อยืนยันการอัปโหลด)
+                                </small>
                             )}
-                            <input type="file" className="input-modern" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
                         </div>
                     )}
 

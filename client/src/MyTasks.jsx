@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './api';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
@@ -8,25 +8,35 @@ function MyTasks() {
     const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
 
+    // ✅ State สำหรับ Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
+
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'technician') { navigate('/'); return; }
         setCurrentUser(user);
-        axios.get('http://localhost:3001/technician-jobs/' + user.user_id).then(res => setJobs(res.data)).catch(err => console.log(err));
+        
+        api.get('/technician-jobs/' + user.user_id)
+            .then(res => setJobs(Array.isArray(res.data) ? res.data : []))
+            .catch(err => console.log(err));
     }, []);
 
-    const handlePrintJobs = () => {
-        window.print();
-    }
+    const handlePrintJobs = () => { window.print(); }
+
+    // --- Logic Pagination ---
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentJobs = jobs.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(jobs.length / itemsPerPage);
 
     return (
         <div className="container" style={{marginTop: '20px'}}>
             <div className="no-print" style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
                 <h2 style={{color: '#2563eb', margin:0}}>🛠️ งานของฉัน (Assigned Tasks)</h2>
-                <button onClick={handlePrintJobs} className="btn btn-secondary">🖨️ พิมพ์รายงานงานซ่อม</button>
+                <button onClick={handlePrintJobs} className="btn btn-secondary">🖨️ พิมพ์รายงาน</button>
             </div>
 
-            {/* ส่วนหัวตอนพิมพ์ */}
             <div className="only-print" style={{display:'none', textAlign:'center', marginBottom:'20px'}}>
                 <h1>รายงานการปฏิบัติงานซ่อมบำรุง</h1>
                 <h3>ช่างผู้ปฏิบัติงาน: {currentUser?.first_name} {currentUser?.last_name}</h3>
@@ -48,9 +58,9 @@ function MyTasks() {
                         </tr>
                     </thead>
                     <tbody>
-                        {jobs.map((job, index) => (
+                        {currentJobs.map((job, index) => (
                             <tr key={job.id}>
-                                <td style={{textAlign: 'center'}}>{index + 1}</td>
+                                <td style={{textAlign: 'center'}}>{indexOfFirstItem + index + 1}</td>
                                 <td>{new Date(job.date_created).toLocaleDateString('th-TH')}</td>
                                 <td>{job.device_name}</td>
                                 <td>{job.problem_detail}</td>
@@ -59,20 +69,20 @@ function MyTasks() {
                                 <td style={{textAlign: 'center'}} className="no-print"><button className="btn-sm btn-primary" onClick={() => navigate(`/job/${job.id}`)}>อัปเดตงาน</button></td>
                             </tr>
                         ))}
-                         {jobs.length === 0 && <tr><td colSpan="7" style={{textAlign:'center', padding:'30px', color:'#888'}}>คุณยังไม่มีงานที่รับผิดชอบ</td></tr>}
+                         {currentJobs.length === 0 && <tr><td colSpan="7" style={{textAlign:'center', padding:'30px', color:'#888'}}>คุณยังไม่มีงานที่รับผิดชอบ</td></tr>}
                     </tbody>
                 </table>
-            </div>
 
-            <style>{`
-                @media print {
-                    .no-print { display: none !important; }
-                    .only-print { display: block !important; }
-                    .card { border: none; box-shadow: none; }
-                }
-            `}</style>
+                {/* ✅ Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="no-print" style={{display:'flex', justifyContent:'center', padding:'20px', gap:'15px', alignItems:'center', background:'#fafafa', borderTop:'1px solid #eee'}}>
+                        <button className="btn-sm btn-secondary" disabled={currentPage===1} onClick={()=>setCurrentPage(p=>p-1)}>&lt; ก่อนหน้า</button>
+                        <span style={{fontWeight:'500', color:'#555'}}> หน้า {currentPage} จาก {totalPages} </span>
+                        <button className="btn-sm btn-secondary" disabled={currentPage===totalPages} onClick={()=>setCurrentPage(p=>p+1)}>ถัดไป &gt;</button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
-
 export default MyTasks;

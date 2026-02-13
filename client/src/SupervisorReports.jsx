@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api เรียบร้อย
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
@@ -10,14 +10,14 @@ function SupervisorReports() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // ดึงข้อมูลทั้งหมดมาคำนวณที่ Frontend
-        axios.get('http://localhost:3001/repairs').then(res => setRepairs(res.data));
-        axios.get('http://localhost:3001/all-withdrawal-requests').then(res => setWithdrawals(res.data));
+        // ✅ เปลี่ยนเป็น api.get และตัด localhost:3001 ออกเพื่อให้ทำงานผ่าน ngrok ได้
+        api.get('/repairs').then(res => setRepairs(res.data));
+        api.get('/all-withdrawal-requests').then(res => setWithdrawals(res.data));
     }, []);
 
     const handlePrint = () => { window.print(); }
 
-    // --- Logic การกรองและคำนวณ ---
+    // --- Logic การกรองและคำนวณ (โค้ดเดิมของคุณทั้งหมด) ---
     
     // 1. กรองงานซ่อมตามเดือนที่เลือก
     const filteredRepairs = repairs.filter(r => r.date_created.startsWith(filterMonth));
@@ -30,12 +30,10 @@ function SupervisorReports() {
         pending: filteredRepairs.filter(r => r.status === 'pending').length
     };
 
-    // 3. สรุปงานรายบุคคล (Technician Performance)
+    // 3. สรุปงานรายบุคคล
     const techStats = {};
     filteredRepairs.forEach(r => {
         if(r.technician_id) {
-            // เราไม่มีชื่อช่างในตาราง repairs โดยตรง ต้องไปแมพเอา หรือใช้ ID ไปก่อนใน Dashboard แบบง่าย
-            // แต่เพื่อให้ง่าย เราจะนับตาม ID ช่าง
             const techId = r.technician_id;
             if(!techStats[techId]) techStats[techId] = { done: 0, total: 0 };
             techStats[techId].total++;
@@ -45,7 +43,7 @@ function SupervisorReports() {
 
     // 4. สรุปการใช้วัสดุ (เฉพาะที่อนุมัติแล้ว)
     const materialUsage = {};
-    withdrawals.filter(w => w.status === 'approved' && w.date_requested.startsWith(filterMonth)).forEach(w => {
+    withdrawals.filter(w => (w.status === 'approved' || w.status === 'completed') && w.date_requested.startsWith(filterMonth)).forEach(w => {
         if(!materialUsage[w.material_name]) materialUsage[w.material_name] = { qty: 0, unit: w.unit };
         materialUsage[w.material_name].qty += w.quantity;
     });

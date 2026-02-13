@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
@@ -29,20 +29,20 @@ function Inventory() {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) { navigate('/'); return; }
         
-        setCurrentUser(user); // ✅ เซ็ตค่า User
-        fetchMaterials();     // ✅ ดึงข้อมูลวัสดุ
+        setCurrentUser(user);
+        fetchMaterials();
 
-        // ดึงข้อมูลเพิ่มเติมเฉพาะถ้าเป็นช่าง
         if (user.role === 'technician') {
             fetchMyActiveJobs(user.user_id);
             fetchHistory(user.user_id);
         }
     }, []);
 
-    const fetchMaterials = () => { axios.get('http://localhost:3001/materials').then(res => setMaterials(res.data)); }
-    const fetchHistory = (userId) => { axios.get('http://localhost:3001/my-withdrawals/' + userId).then(res => setHistory(res.data)); }
+    // ✅ เปลี่ยนจาก axios เป็น api และตัด URL ส่วนเกินออก
+    const fetchMaterials = () => { api.get('/materials').then(res => setMaterials(res.data)); }
+    const fetchHistory = (userId) => { api.get('/my-withdrawals/' + userId).then(res => setHistory(res.data)); }
     const fetchMyActiveJobs = (userId) => {
-        axios.get('http://localhost:3001/repairs').then(allJobs => {
+        api.get('/repairs').then(allJobs => {
             const active = allJobs.data.filter(job => job.technician_id === userId && job.status === 'doing');
             setMyJobs(active);
         });
@@ -68,10 +68,12 @@ function Inventory() {
         if (isNumeric(matFormData.unit)) { alert('❌ หน่วยนับห้ามเป็นตัวเลข'); return; }
 
         const payload = editingMaterial ? { ...matFormData, id: editingMaterial.id } : matFormData;
-        const url = editingMaterial ? 'http://localhost:3001/update-material' : 'http://localhost:3001/add-material';
         
         try {
-            const res = editingMaterial ? await axios.put(url, payload) : await axios.post(url, payload);
+            // ✅ ใช้ api.put หรือ api.post
+            const res = editingMaterial 
+                ? await api.put('/update-material', payload) 
+                : await api.post('/add-material', payload);
 
             if (res.data === "Duplicate Name" || (res.data && res.data.message === "Duplicate Name") || (res.data && res.data.code === 'ER_DUP_ENTRY')) {
                 window.alert(`❌ ชื่อซ้ำกัน!\nชื่อ "${matFormData.name}" มีอยู่ในระบบแล้ว`);
@@ -86,7 +88,7 @@ function Inventory() {
                 window.alert('❌ เกิดข้อผิดพลาด');
             }
         } catch (err) {
-            console.error("Axios Error:", err);
+            console.error("API Error:", err);
             window.alert('❌ เชื่อมต่อ Server ไม่ได้');
         }
     }
@@ -104,7 +106,9 @@ function Inventory() {
             setAlertModal({ show: true, type: 'error', title: '❌ ข้อมูลผิดพลาด', message: 'จำนวนต้องมากกว่า 0' });
             return; 
         }
-        axios.post('http://localhost:3001/request-material', { 
+
+        // ✅ เปลี่ยนเป็น api.post
+        api.post('/request-material', { 
             repair_id: selectedJobId, material_id: selectedMaterial.id, quantity: withdrawQty, technician_id: currentUser.user_id 
         }).then(res => { 
             if (res.data === "Success") { 
@@ -117,13 +121,13 @@ function Inventory() {
 
     const handleDeleteWithdrawal = (id) => {
         if(confirm("ต้องการยกเลิกคำขอนี้ใช่หรือไม่?")) {
-            axios.delete('http://localhost:3001/delete-withdrawal/' + id).then(res => { if(res.data === "Success") { fetchHistory(currentUser.user_id); } });
+            // ✅ เปลี่ยนเป็น api.delete
+            api.delete('/delete-withdrawal/' + id).then(res => { if(res.data === "Success") { fetchHistory(currentUser.user_id); } });
         }
     }
 
     const handlePrint = () => { window.print(); }
 
-    // 🔴 [สำคัญ] ป้องกันจอขาว: ถ้ายังโหลด User ไม่เสร็จ ห้าม Render ส่วนข้างล่าง
     if (!currentUser) return <div style={{marginTop:'50px', textAlign:'center'}}>⏳ กำลังโหลดข้อมูล...</div>;
 
     return (
@@ -132,7 +136,6 @@ function Inventory() {
                 <h2 style={{margin:0}}>📦 ระบบคลังวัสดุ</h2>
                 <div style={{display:'flex', gap:'10px'}}>
                     <button className={`btn ${activeTab === 'stock' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('stock')}>รายการวัสดุ</button>
-                    {/* แสดงปุ่มประวัติเฉพาะช่าง */}
                     {currentUser.role === 'technician' && (
                         <button className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('history')}>ประวัติการเบิก</button>
                     )}
@@ -179,7 +182,6 @@ function Inventory() {
                                             {currentUser.role === 'inventory' && (
                                                 <button className="btn-sm" onClick={() => openEditMaterial(m)} style={{backgroundColor:'#f59e0b', color:'white', border:'none'}}>แก้ไข</button>
                                             )}
-                                            {/* Role อื่นๆ ดูได้อย่างเดียว */}
                                             {!['technician', 'inventory'].includes(currentUser.role) && (
                                                 <span style={{color:'#999', fontSize:'0.8rem'}}>-</span>
                                             )}

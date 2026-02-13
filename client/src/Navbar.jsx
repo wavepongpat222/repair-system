@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
-import Swal from 'sweetalert2'; // ✅ ใช้ SweetAlert2
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
+import Swal from 'sweetalert2';
 import './App.css';
 
 function Navbar() {
@@ -11,7 +11,6 @@ function Navbar() {
     const userString = localStorage.getItem('user');
     const user = userString ? JSON.parse(userString) : null;
 
-    // --- State สำหรับเปลี่ยนรหัสผ่าน ---
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [pwdData, setPwdData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
 
@@ -28,13 +27,12 @@ function Navbar() {
         }).then((result) => {
             if (result.isConfirmed) {
                 localStorage.removeItem('user');
-                navigate('/'); // ✅ กลับไปหน้าหลัก (Home)
+                navigate('/');
             }
         });
     };
 
     const handlePrint = () => {
-        // ✅ ถ้าอยู่หน้าเพิ่มผู้ใช้ ให้แจ้งเตือนแทนการพิมพ์
         if (location.pathname === '/add-user') {
             Swal.fire({
                 icon: 'info',
@@ -53,7 +51,8 @@ function Navbar() {
             return;
         }
         
-        axios.put('http://localhost:3001/change-password', {
+        // ✅ เปลี่ยนเป็น api.put และตัด URL ส่วนเกินออก
+        api.put('/change-password', {
             user_id: user.user_id,
             oldPassword: pwdData.oldPassword,
             newPassword: pwdData.newPassword
@@ -99,7 +98,12 @@ function Navbar() {
                     {!user && <Link to="/" className={`nav-pill ${location.pathname === '/' ? 'active' : ''}`}>🏠 หน้าแรก</Link>}
                     {user && (
                         <>
-                            {user.role !== 'user' && <Link to={getHomeLink(user.role)} className={`nav-pill ${location.pathname.includes('dashboard') ? 'active' : ''}`}>🏠 หน้าหลักระบบ</Link>}
+                            {user.role !== 'user' && user.role !== 'technician' && (
+                                <Link to={getHomeLink(user.role)} className={`nav-pill ${location.pathname.includes('dashboard') ? 'active' : ''}`}>
+                                    🏠 หน้าหลักระบบ
+                                </Link>
+                            )}
+
                             {user.role === 'user' && (
                                 <>
                                     <Link to="/create" className={`nav-pill ${location.pathname === '/create' ? 'active' : ''}`}>📝 แจ้งซ่อม</Link>
@@ -124,8 +128,10 @@ function Navbar() {
                                     <Link to="/reports" className={`nav-pill ${location.pathname === '/reports' ? 'active' : ''}`}>📊 รายงาน</Link>
                                 </>
                             )}
+                            
                             {user.role === 'inventory' && (
                                 <>
+                                    <Link to="/approvals" className={`nav-pill ${location.pathname === '/approvals' ? 'active' : ''}`}>📦 จ่ายวัสดุ</Link>
                                     <Link to="/inventory-report" className={`nav-pill ${location.pathname === '/inventory-report' ? 'active' : ''}`}>📉 สรุปสต็อก</Link>
                                     {(location.pathname === '/inventory-report' || location.pathname === '/inventory-dashboard') && <button onClick={handlePrint} className="nav-pill-btn">🖨️ พิมพ์รายงาน</button>}
                                 </>
@@ -154,7 +160,6 @@ function Navbar() {
             </div>
         </nav>
 
-        {/* --- Modal เปลี่ยนรหัสผ่าน --- */}
         {showPasswordModal && (
             <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
                 <div style={{backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '350px', textAlign: 'center'}}>

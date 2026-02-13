@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './App.css';
@@ -20,19 +20,18 @@ function AddUser() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // 1. เช็คชื่อ-นามสกุล
         if (hasNumber(firstName) || hasNumber(lastName)) {
             Swal.fire('ข้อมูลไม่ถูกต้อง', 'ชื่อและนามสกุลต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข', 'warning');
             return;
         }
 
-        // 2. เช็ค Password
         if (password !== confirmPassword) {
             Swal.fire('ข้อผิดพลาด', 'รหัสผ่านยืนยันไม่ตรงกัน', 'error');
             return;
         }
 
-        axios.post('http://localhost:3001/add-user', {
+        // ✅ เรียกใช้ api.post และตัด URL ข้างหน้าออก
+        api.post('/add-user', {
             username, 
             password, 
             first_name: firstName, 
@@ -57,7 +56,6 @@ function AddUser() {
 
     return (
         <div className="container" style={{ maxWidth: '500px', marginTop: '50px' }}>
-            {/* ✅ hide-on-print-page: ซ่อนฟอร์มนี้เวลาสั่งพิมพ์ */}
             <div className="card hide-on-print-page">
                 <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>👤 เพิ่มผู้ใช้งานใหม่</h2>
                 
@@ -121,7 +119,6 @@ function AddUser() {
                 </form>
             </div>
 
-            {/* ✅ ข้อความแจ้งเตือนเวลาเผลอกดพิมพ์หน้านี้ */}
             <div className="only-print" style={{display:'none', textAlign:'center', marginTop:'50px'}}>
                 <h3>⚠️ กรุณาไปที่หน้า "หน้าหลักระบบ" (Admin Dashboard) เพื่อพิมพ์รายชื่อผู้ใช้</h3>
             </div>

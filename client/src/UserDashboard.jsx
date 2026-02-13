@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
@@ -15,7 +15,7 @@ function UserDashboard() {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) { navigate('/'); } 
         else { setCurrentUser(user); }
-    }, []);
+    }, [navigate]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -29,11 +29,11 @@ function UserDashboard() {
         formData.append('location', location);
         if (image) formData.append('repair_image', image);
 
-        axios.post('http://localhost:3001/add-repair', formData)
+        // ✅ เปลี่ยนเป็น api.post และตัด URL ส่วนเกินออก
+        api.post('/add-repair', formData)
             .then(res => {
                 if(res.data === "Success") {
                     alert("บันทึกข้อมูลเรียบร้อย ✅");
-                    // เมื่อแจ้งซ่อมเสร็จ ให้เด้งไปหน้าประวัติทันที
                     navigate('/history'); 
                 } else {
                     alert("เกิดข้อผิดพลาด");
