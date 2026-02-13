@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import './App.css';
 
 function AddUser() {
@@ -10,25 +11,24 @@ function AddUser() {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [role, setRole] = useState('user');
-    const [email, setEmail] = useState(''); // ✅ เพิ่ม state email
+    const [email, setEmail] = useState('');
     
     const navigate = useNavigate();
 
-    // ✅ ฟังก์ชันเช็คว่ามีตัวเลขปนไหม (Regular Expression)
     const hasNumber = (str) => /\d/.test(str);
 
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // 1. เช็คชื่อ-นามสกุล ห้ามมีตัวเลข
+        // 1. เช็คชื่อ-นามสกุล
         if (hasNumber(firstName) || hasNumber(lastName)) {
-            alert("❌ ชื่อและนามสกุลต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข");
+            Swal.fire('ข้อมูลไม่ถูกต้อง', 'ชื่อและนามสกุลต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข', 'warning');
             return;
         }
 
-        // 2. เช็ค Password ตรงกันไหม
+        // 2. เช็ค Password
         if (password !== confirmPassword) {
-            alert("❌ รหัสผ่านยืนยันไม่ตรงกัน! กรุณากรอกใหม่");
+            Swal.fire('ข้อผิดพลาด', 'รหัสผ่านยืนยันไม่ตรงกัน', 'error');
             return;
         }
 
@@ -38,18 +38,18 @@ function AddUser() {
             first_name: firstName, 
             last_name: lastName, 
             role, 
-            email // ✅ ส่ง email ไปด้วย
+            email
         })
         .then(res => {
             if(res.data === "Success") {
-                alert("✅ เพิ่มผู้ใช้เรียบร้อย");
-                navigate('/admin-dashboard'); 
+                Swal.fire('สำเร็จ', 'เพิ่มผู้ใช้งานเรียบร้อย', 'success')
+                .then(() => navigate('/admin-dashboard'));
             } else if (res.data === "Username Already Exists") {
-                alert("❌ Username นี้มีผู้ใช้แล้ว");
+                Swal.fire('ข้อมูลซ้ำ', 'Username นี้มีผู้ใช้แล้ว', 'error');
             } else if (res.data === "Email Already Exists") {
-                alert("❌ Email นี้มีในระบบแล้ว ห้ามซ้ำ!");
+                Swal.fire('ข้อมูลซ้ำ', 'Email นี้มีในระบบแล้ว', 'error');
             } else {
-                alert("เกิดข้อผิดพลาด");
+                Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก', 'error');
             }
         })
         .catch(err => console.log(err));
@@ -57,7 +57,8 @@ function AddUser() {
 
     return (
         <div className="container" style={{ maxWidth: '500px', marginTop: '50px' }}>
-            <div className="card">
+            {/* ✅ hide-on-print-page: ซ่อนฟอร์มนี้เวลาสั่งพิมพ์ */}
+            <div className="card hide-on-print-page">
                 <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>👤 เพิ่มผู้ใช้งานใหม่</h2>
                 
                 <form onSubmit={handleSubmit}>
@@ -73,7 +74,6 @@ function AddUser() {
                         </div>
                     </div>
 
-                    {/* ✅ เพิ่มช่องกรอก Email */}
                     <div className="form-group">
                         <label>อีเมล (ห้ามซ้ำ)</label>
                         <input type="email" className="form-control" required onChange={e => setEmail(e.target.value)} placeholder="name@example.com" />
@@ -85,7 +85,7 @@ function AddUser() {
                     </div>
 
                     <div className="form-group">
-                        <label>Password (รหัสผ่าน)</label>
+                        <label>Password</label>
                         <input type="password" className="form-control" required onChange={e => setPassword(e.target.value)} />
                     </div>
 
@@ -96,7 +96,7 @@ function AddUser() {
                             className="form-control" 
                             required 
                             onChange={e => setConfirmPassword(e.target.value)}
-                            style={{ borderColor: (confirmPassword && password !== confirmPassword) ? 'red' : '#ccc' }}
+                            style={{ borderColor: (confirmPassword && password !== confirmPassword) ? 'red' : '#e2e8f0' }}
                         />
                          {confirmPassword && password !== confirmPassword && (
                             <small style={{ color: 'red' }}>❌ รหัสผ่านไม่ตรงกัน</small>
@@ -119,6 +119,11 @@ function AddUser() {
                         <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => navigate('/admin-dashboard')}>ยกเลิก</button>
                     </div>
                 </form>
+            </div>
+
+            {/* ✅ ข้อความแจ้งเตือนเวลาเผลอกดพิมพ์หน้านี้ */}
+            <div className="only-print" style={{display:'none', textAlign:'center', marginTop:'50px'}}>
+                <h3>⚠️ กรุณาไปที่หน้า "หน้าหลักระบบ" (Admin Dashboard) เพื่อพิมพ์รายชื่อผู้ใช้</h3>
             </div>
         </div>
     );

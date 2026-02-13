@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import './App.css';
 
 function InventoryDashboard() {
@@ -9,13 +10,9 @@ function InventoryDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
-    // Modal State สำหรับแก้ไข
+    // Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState({ id: '', name: '', qty: '', unit: '' });
-    
-    // Modal State สำหรับยืนยันการลบ
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteId, setDeleteId] = useState(null);
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
@@ -31,31 +28,45 @@ function InventoryDashboard() {
 
     const handleAdd = (e) => {
         e.preventDefault();
+        
+        // ✅ ตรวจสอบหน่วยนับ (ห้ามมีตัวเลข)
+        if (/\d/.test(newMaterial.unit)) {
+            Swal.fire('ข้อมูลไม่ถูกต้อง', 'หน่วยนับต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข', 'warning');
+            return;
+        }
+
         axios.post('http://localhost:3001/add-material', newMaterial)
             .then(res => {
                 if(res.data === "Success") {
-                    alert("เพิ่มวัสดุเรียบร้อย");
+                    Swal.fire('สำเร็จ', 'เพิ่มวัสดุเรียบร้อย', 'success');
                     setNewMaterial({ name: '', qty: '', unit: '' });
                     fetchMaterials();
+                } else if (res.data === "Duplicate Name") {
+                    Swal.fire('ชื่อซ้ำ', 'มีวัสดุชื่อนี้ในระบบแล้ว', 'error');
                 }
             });
     }
 
-    // 1. กดปุ่มลบ (เปิด Popup)
     const handleClickDelete = (id) => {
-        setDeleteId(id);
-        setShowDeleteModal(true);
-    }
-
-    // 2. ยืนยันลบ (ยิง API)
-    const confirmDelete = () => {
-        axios.delete('http://localhost:3001/delete-material/' + deleteId)
-            .then(res => { 
-                if(res.data === "Success") {
-                    fetchMaterials(); 
-                    setShowDeleteModal(false);
-                }
-            });
+        Swal.fire({
+            title: 'ยืนยันการลบ?',
+            text: "คุณต้องการลบวัสดุนี้ใช่หรือไม่?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'ลบเลย',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                axios.delete('http://localhost:3001/delete-material/' + id)
+                    .then(res => { 
+                        if(res.data === "Success") {
+                            Swal.fire('ลบแล้ว', 'ลบวัสดุเรียบร้อย', 'success');
+                            fetchMaterials(); 
+                        }
+                    });
+            }
+        });
     }
 
     const handleEditClick = (material) => {
@@ -70,6 +81,13 @@ function InventoryDashboard() {
 
     const handleUpdateMaterial = (e) => {
         e.preventDefault();
+        
+        // ✅ ตรวจสอบหน่วยนับ (ห้ามมีตัวเลข)
+        if (/\d/.test(editingMaterial.unit)) {
+            Swal.fire('ข้อมูลไม่ถูกต้อง', 'หน่วยนับต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข', 'warning');
+            return;
+        }
+
         axios.put('http://localhost:3001/update-material', {
             id: editingMaterial.id,
             name: editingMaterial.name,
@@ -77,11 +95,13 @@ function InventoryDashboard() {
             unit: editingMaterial.unit
         }).then(res => {
             if(res.data === "Success") {
-                alert("แก้ไขข้อมูลเรียบร้อย ✅");
+                Swal.fire('สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', 'success');
                 setIsEditModalOpen(false);
                 fetchMaterials();
+            } else if (res.data === "Duplicate Name") {
+                Swal.fire('ชื่อซ้ำ', 'มีวัสดุชื่อนี้ในระบบแล้ว', 'error');
             } else {
-                alert("เกิดข้อผิดพลาดในการแก้ไข");
+                Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการแก้ไข', 'error');
             }
         });
     }
@@ -171,7 +191,7 @@ function InventoryDashboard() {
                             <input type="number" className="input-modern" value={newMaterial.qty} onChange={e => setNewMaterial({...newMaterial, qty: e.target.value})} required />
                         </div>
                         <div className="form-group">
-                            <label>หน่วยนับ</label>
+                            <label>หน่วยนับ (ห้ามตัวเลข)</label>
                             <input type="text" className="input-modern" value={newMaterial.unit} onChange={e => setNewMaterial({...newMaterial, unit: e.target.value})} placeholder="เช่น ชิ้น, อัน, กล่อง" required />
                         </div>
                         <button type="submit" className="btn btn-primary" style={{width: '100%'}}>บันทึก</button>
@@ -182,85 +202,32 @@ function InventoryDashboard() {
 
             {/* --- Modal แก้ไขวัสดุ --- */}
             {isEditModalOpen && (
-                <div className="modal-overlay" style={modalOverlayStyle}>
-                    <div className="modal-box" style={modalBoxStyle}>
+                <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '400px', maxWidth:'90%', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
                         <h3 style={{marginTop: 0, marginBottom: '20px', color:'#333'}}>✏️ แก้ไขข้อมูลวัสดุ</h3>
                         <form onSubmit={handleUpdateMaterial}>
                             <div className="form-group">
                                 <label>ชื่อวัสดุ</label>
-                                <input 
-                                    type="text" 
-                                    className="input-modern" 
-                                    value={editingMaterial.name} 
-                                    onChange={e => setEditingMaterial({...editingMaterial, name: e.target.value})} 
-                                    required 
-                                />
+                                <input type="text" className="input-modern" value={editingMaterial.name} onChange={e => setEditingMaterial({...editingMaterial, name: e.target.value})} required />
                             </div>
                             <div className="form-group">
                                 <label>จำนวนคงเหลือ</label>
-                                <input 
-                                    type="number" 
-                                    className="input-modern" 
-                                    value={editingMaterial.qty} 
-                                    onChange={e => setEditingMaterial({...editingMaterial, qty: e.target.value})} 
-                                    required 
-                                />
+                                <input type="number" className="input-modern" value={editingMaterial.qty} onChange={e => setEditingMaterial({...editingMaterial, qty: e.target.value})} required />
                             </div>
                             <div className="form-group">
                                 <label>หน่วยนับ</label>
-                                <input 
-                                    type="text" 
-                                    className="input-modern" 
-                                    value={editingMaterial.unit} 
-                                    onChange={e => setEditingMaterial({...editingMaterial, unit: e.target.value})} 
-                                    required 
-                                />
+                                <input type="text" className="input-modern" value={editingMaterial.unit} onChange={e => setEditingMaterial({...editingMaterial, unit: e.target.value})} required />
                             </div>
                             <div style={{display: 'flex', gap: '10px', marginTop:'20px'}}>
-                                <button type="submit" className="btn btn-primary" style={{flex: 1}}>บันทึกการแก้ไข</button>
-                                <button 
-                                    type="button" 
-                                    className="btn btn-secondary" 
-                                    style={{flex: 1}} 
-                                    onClick={() => setIsEditModalOpen(false)}
-                                >
-                                    ยกเลิก
-                                </button>
+                                <button type="submit" className="btn btn-primary" style={{flex: 1}}>บันทึก</button>
+                                <button type="button" className="btn btn-secondary" style={{flex: 1}} onClick={() => setIsEditModalOpen(false)}>ยกเลิก</button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
-
-            {/* --- Modal ยืนยันลบ (กลางจอ) --- */}
-            {showDeleteModal && (
-                <div className="modal-overlay" style={modalOverlayStyle}>
-                    <div className="modal-box" style={modalBoxStyle}>
-                        <div style={{fontSize: '3rem', marginBottom: '10px'}}>⚠️</div>
-                        <h3 style={{marginTop: 0, color:'#333'}}>ยืนยันลบวัสดุ?</h3>
-                        <p style={{color: '#666', marginBottom: '25px'}}>คุณต้องการลบรายการนี้ออกจากคลังใช่หรือไม่?</p>
-                        <div style={{display: 'flex', gap: '10px'}}>
-                            <button onClick={confirmDelete} style={{flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize:'1rem'}}>ลบข้อมูล</button>
-                            <button onClick={() => setShowDeleteModal(false)} style={{flex: 1, backgroundColor: '#e5e7eb', color: '#374151', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize:'1rem'}}>ยกเลิก</button>
-                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
 }
-
-// สไตล์สำหรับ Popup กลางจอ
-const modalOverlayStyle = {
-    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
-    display: 'flex', justifyContent: 'center', alignItems: 'center'
-};
-
-const modalBoxStyle = {
-    backgroundColor: 'white', padding: '30px', borderRadius: '16px',
-    width: '90%', maxWidth: '400px', textAlign: 'center',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease-out'
-};
 
 export default InventoryDashboard;

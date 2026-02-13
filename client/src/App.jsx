@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './Navbar'; 
-import Home from './Home'; // <--- 1. อย่าลืม Import Home
+import Home from './Home'; 
 import Login from './Login';
 import Dashboard from './Dashboard';
 import CreateRepair from './CreateRepair';
@@ -18,6 +18,10 @@ import AdminDashboard from './AdminDashboard';
 import RepairHistory from './RepairHistory';
 import MyTasks from './MyTasks';
 
+// ✅ เพิ่ม Import 2 หน้าใหม่สำหรับระบบลืมรหัสผ่าน
+import ForgotPassword from './ForgotPassword';
+import ResetPassword from './ResetPassword';
+
 function App() {
   return (
     <BrowserRouter>
@@ -34,6 +38,10 @@ function App() {
             <Route path="/" element={<Home />} />           {/* หน้าแรก = Home */}
             <Route path="/login" element={<Login />} />     {/* หน้า Login แยกออกมา */}
             
+            {/* ✅ เพิ่ม Route สำหรับลืมรหัสผ่าน */}
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
             {/* Route อื่นๆ เหมือนเดิม */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/my-tasks" element={<MyTasks />} />

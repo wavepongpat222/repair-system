@@ -1,6 +1,7 @@
-import { useState } from 'react'; // ✅ เพิ่ม useState
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios'; // ✅ เพิ่ม axios
+import axios from 'axios';
+import Swal from 'sweetalert2'; // ✅ ใช้ SweetAlert2
 import './App.css';
 
 function Navbar() {
@@ -15,18 +16,40 @@ function Navbar() {
     const [pwdData, setPwdData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
 
     const handleLogout = () => {
-        localStorage.removeItem('user');
-        navigate('/login');
+        Swal.fire({
+            title: 'ออกจากระบบ?',
+            text: "คุณต้องการออกจากระบบใช่หรือไม่?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ใช่, ออกจากระบบ',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                localStorage.removeItem('user');
+                navigate('/'); // ✅ กลับไปหน้าหลัก (Home)
+            }
+        });
     };
 
     const handlePrint = () => {
-        window.print();
+        // ✅ ถ้าอยู่หน้าเพิ่มผู้ใช้ ให้แจ้งเตือนแทนการพิมพ์
+        if (location.pathname === '/add-user') {
+            Swal.fire({
+                icon: 'info',
+                title: 'ไม่สามารถพิมพ์หน้านี้ได้',
+                text: 'กรุณาไปที่หน้า "หน้าหลักระบบ" เพื่อพิมพ์รายชื่อผู้ใช้งานทั้งหมด'
+            });
+        } else {
+            window.print();
+        }
     };
 
     const handleChangePassword = (e) => {
         e.preventDefault();
         if (pwdData.newPassword !== pwdData.confirmPassword) {
-            alert("❌ รหัสผ่านใหม่ไม่ตรงกัน");
+            Swal.fire('ข้อผิดพลาด', 'รหัสผ่านใหม่ไม่ตรงกัน', 'error');
             return;
         }
         
@@ -37,12 +60,16 @@ function Navbar() {
         })
         .then(res => {
             if (res.data === "Success") {
-                alert("✅ เปลี่ยนรหัสผ่านสำเร็จ! กรุณาเข้าสู่ระบบใหม่");
-                handleLogout(); // บังคับ Logout
+                setShowPasswordModal(false);
+                Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อย กรุณาเข้าสู่ระบบใหม่', 'success')
+                .then(() => {
+                    localStorage.removeItem('user');
+                    navigate('/login');
+                });
             } else if (res.data === "Wrong Old Password") {
-                alert("❌ รหัสผ่านเดิมไม่ถูกต้อง");
+                Swal.fire('ข้อผิดพลาด', 'รหัสผ่านเดิมไม่ถูกต้อง', 'error');
             } else {
-                alert("เกิดข้อผิดพลาด");
+                Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ', 'error');
             }
         })
         .catch(err => console.log(err));
@@ -117,8 +144,7 @@ function Navbar() {
                                     <span style={{fontSize:'0.75rem', color:'#64748b'}}>{user.role.toUpperCase()}</span>
                                 </div>
                             </div>
-                            {/* ✅ ปุ่มเปลี่ยนรหัสผ่าน */}
-                            <button onClick={() => setShowPasswordModal(true)} className="btn-sm" style={{marginRight:'5px', background:'none', border:'1px solid #ccc', color:'#333'}}>🔑</button>
+                            <button onClick={() => setShowPasswordModal(true)} className="btn-sm" style={{marginRight:'5px', background:'none', border:'1px solid #ccc', color:'#333', cursor:'pointer'}} title="เปลี่ยนรหัสผ่าน">🔑</button>
                             <button onClick={handleLogout} className="btn-logout-red">🚪 ออก</button>
                         </>
                     ) : (

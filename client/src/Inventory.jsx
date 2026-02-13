@@ -22,14 +22,17 @@ function Inventory() {
     const [withdrawQty, setWithdrawQty] = useState(1);
     const [selectedJobId, setSelectedJobId] = useState('');
     
-    // Alert Modal (สำหรับ Success หรือ Error ทั่วไป)
+    // Alert Modal
     const [alertModal, setAlertModal] = useState({ show: false, type: '', title: '', message: '' });
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) { navigate('/'); return; }
-        setCurrentUser(user);
-        fetchMaterials();
+        
+        setCurrentUser(user); // ✅ เซ็ตค่า User
+        fetchMaterials();     // ✅ ดึงข้อมูลวัสดุ
+
+        // ดึงข้อมูลเพิ่มเติมเฉพาะถ้าเป็นช่าง
         if (user.role === 'technician') {
             fetchMyActiveJobs(user.user_id);
             fetchHistory(user.user_id);
@@ -59,65 +62,32 @@ function Inventory() {
         setIsMaterialModalOpen(true);
     }
 
-    // ✅ แก้ไขฟังก์ชันบันทึก: ใช้ async/await และ window.alert เพื่อความชัวร์ 100%
     const handleMaterialSubmit = async (e) => {
         e.preventDefault();
-
-        // 1. Validation
-        if (matFormData.quantity <= 0) { 
-             alert('❌ จำนวนห้ามเป็น 0 หรือติดลบ');
-             return; 
-        }
-        if (isNumeric(matFormData.unit)) { 
-             alert('❌ หน่วยนับห้ามเป็นตัวเลข (เช่น อัน, ชิ้น, กล่อง)');
-             return; 
-        }
+        if (matFormData.quantity <= 0) { alert('❌ จำนวนห้ามเป็น 0 หรือติดลบ'); return; }
+        if (isNumeric(matFormData.unit)) { alert('❌ หน่วยนับห้ามเป็นตัวเลข'); return; }
 
         const payload = editingMaterial ? { ...matFormData, id: editingMaterial.id } : matFormData;
         const url = editingMaterial ? 'http://localhost:3001/update-material' : 'http://localhost:3001/add-material';
         
         try {
-            // ใช้ await เพื่อรอให้ Server ตอบกลับมาจริงๆ ก่อนจะไปต่อ
-            const res = editingMaterial 
-                ? await axios.put(url, payload) 
-                : await axios.post(url, payload);
+            const res = editingMaterial ? await axios.put(url, payload) : await axios.post(url, payload);
 
-            console.log("📌 Server Response:", res.data); // ดูค่าใน Console (F12)
-
-            // --- เช็คผลลัพธ์ ---
-
-            // 1. กรณีชื่อซ้ำ (แบบ String) - อันนี้คือที่ Backend ส่งมาแน่นอน
-            if (res.data === "Duplicate Name") {
-                window.alert(`❌ ชื่อซ้ำกัน!\n\nชื่อ "${matFormData.name}" มีอยู่ในระบบแล้ว กรุณาใช้ชื่ออื่น`);
+            if (res.data === "Duplicate Name" || (res.data && res.data.message === "Duplicate Name") || (res.data && res.data.code === 'ER_DUP_ENTRY')) {
+                window.alert(`❌ ชื่อซ้ำกัน!\nชื่อ "${matFormData.name}" มีอยู่ในระบบแล้ว`);
                 return;
             }
 
-            // 2. กรณีชื่อซ้ำ (แบบ Object - เผื่อไว้)
-            if (res.data && res.data.message === "Duplicate Name") {
-                window.alert(`❌ ชื่อซ้ำกัน!\n\nชื่อ "${matFormData.name}" มีอยู่ในระบบแล้ว`);
-                return;
-            }
-
-            // 3. กรณี Database Error โดยตรง (Code 1062 = Duplicate entry)
-            if (res.data && res.data.code === 'ER_DUP_ENTRY') {
-                window.alert(`❌ ชื่อซ้ำกัน!\n\nชื่อ "${matFormData.name}" มีอยู่ในระบบแล้ว (Database Check)`);
-                return;
-            }
-
-            // 4. สำเร็จ
             if (res.data === "Success") {
                 window.alert('✅ บันทึกข้อมูลเรียบร้อย');
                 setIsMaterialModalOpen(false);
                 fetchMaterials();
             } else {
-                // กรณี Error อื่นๆ ที่ไม่รู้จัก
-                console.log("Unknown Error:", res.data);
-                window.alert('❌ เกิดข้อผิดพลาดจาก Server\nดูรายละเอียดใน Console');
+                window.alert('❌ เกิดข้อผิดพลาด');
             }
-
         } catch (err) {
             console.error("Axios Error:", err);
-            window.alert('❌ เชื่อมต่อ Server ไม่ได้\nกรุณาตรวจสอบว่าเปิดไฟล์ index.js หรือยัง?');
+            window.alert('❌ เชื่อมต่อ Server ไม่ได้');
         }
     }
 
@@ -153,13 +123,19 @@ function Inventory() {
 
     const handlePrint = () => { window.print(); }
 
+    // 🔴 [สำคัญ] ป้องกันจอขาว: ถ้ายังโหลด User ไม่เสร็จ ห้าม Render ส่วนข้างล่าง
+    if (!currentUser) return <div style={{marginTop:'50px', textAlign:'center'}}>⏳ กำลังโหลดข้อมูล...</div>;
+
     return (
         <div className="container" style={{marginTop: '20px'}}>
             <div className="no-print" style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
                 <h2 style={{margin:0}}>📦 ระบบคลังวัสดุ</h2>
                 <div style={{display:'flex', gap:'10px'}}>
                     <button className={`btn ${activeTab === 'stock' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('stock')}>รายการวัสดุ</button>
-                    <button className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('history')}>ประวัติการเบิก</button>
+                    {/* แสดงปุ่มประวัติเฉพาะช่าง */}
+                    {currentUser.role === 'technician' && (
+                        <button className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('history')}>ประวัติการเบิก</button>
+                    )}
                 </div>
             </div>
 
@@ -178,7 +154,7 @@ function Inventory() {
                         </div>
                     )}
                     
-                    <div className="card" style={{ padding: '0', overflow: 'hidden', border: '1px solid #eee' }}>
+                    <div className="card" style={{ padding: '0', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
                         <table className="custom-table" style={{width:'100%'}}>
                             <thead>
                                 <tr style={{backgroundColor: '#f9fafb'}}>
@@ -203,22 +179,29 @@ function Inventory() {
                                             {currentUser.role === 'inventory' && (
                                                 <button className="btn-sm" onClick={() => openEditMaterial(m)} style={{backgroundColor:'#f59e0b', color:'white', border:'none'}}>แก้ไข</button>
                                             )}
+                                            {/* Role อื่นๆ ดูได้อย่างเดียว */}
+                                            {!['technician', 'inventory'].includes(currentUser.role) && (
+                                                <span style={{color:'#999', fontSize:'0.8rem'}}>-</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
+                                {materials.length === 0 && (
+                                    <tr><td colSpan="5" style={{textAlign:'center', padding:'20px', color:'#888'}}>ไม่พบรายการวัสดุในคลัง</td></tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
                 </div>
             )}
 
-            {activeTab === 'history' && (
+            {activeTab === 'history' && currentUser.role === 'technician' && (
                 <div>
                      <div className="no-print" style={{textAlign:'right', marginBottom:'10px'}}>
                          <button onClick={handlePrint} className="btn btn-secondary">🖨️ พิมพ์ประวัติ</button>
                     </div>
 
-                    <div className="card" style={{ padding: '0', overflow: 'hidden', border: '1px solid #eee' }}>
+                    <div className="card" style={{ padding: '0', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
                         <table className="custom-table" style={{width:'100%'}}>
                             <thead>
                                 <tr style={{backgroundColor: '#f9fafb'}}>
@@ -259,6 +242,9 @@ function Inventory() {
                                         </td>
                                     </tr>
                                 ))}
+                                {history.length === 0 && (
+                                    <tr><td colSpan="5" style={{textAlign:'center', padding:'20px', color:'#888'}}>ไม่พบประวัติการเบิก</td></tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -313,12 +299,8 @@ function Inventory() {
                     .only-print { display: block !important; }
                     .card { border: none !important; box-shadow: none !important; padding: 0 !important; }
                     .container { margin: 0 !important; max-width: 100% !important; }
-                    
-                    /* ตารางตอนพิมพ์: เส้นชัด, เต็มจอ */
                     table { width: 100% !important; border-collapse: collapse; }
                     th, td { border: 1px solid #000 !important; padding: 8px !important; color: black !important; font-size: 14px; }
-                    
-                    /* ซ่อนปุ่มต่างๆ ในตาราง */
                     td button { display: none !important; }
                 }
             `}</style>

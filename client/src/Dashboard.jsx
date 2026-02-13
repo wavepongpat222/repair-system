@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import './App.css';
 
 function Dashboard() {
@@ -9,6 +10,10 @@ function Dashboard() {
     const [technicians, setTechnicians] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10); // ✅ หน้าละ 10 งาน
 
     // Modal มอบหมายงาน
     const [assignModal, setAssignModal] = useState({ show: false, jobId: null });
@@ -38,14 +43,14 @@ function Dashboard() {
     }
 
     const handleAssignSubmit = () => {
-        if (!selectedTech) { alert("กรุณาเลือกช่าง"); return; }
+        if (!selectedTech) { Swal.fire('แจ้งเตือน', 'กรุณาเลือกช่าง', 'warning'); return; }
         
         axios.put('http://localhost:3001/assign-job', {
             repair_id: assignModal.jobId,
             technician_id: selectedTech
         }).then(res => {
             if (res.data === "Success") {
-                alert("✅ มอบหมายงานสำเร็จ");
+                Swal.fire('สำเร็จ', 'มอบหมายงานเรียบร้อย', 'success');
                 setAssignModal({ show: false, jobId: null });
                 fetchJobs();
             }
@@ -54,8 +59,20 @@ function Dashboard() {
 
     const filteredJobs = jobs.filter(job => {
         const term = searchTerm.toLowerCase();
-        return job.device_name.toLowerCase().includes(term) || job.problem_detail.toLowerCase().includes(term) || job.location.toLowerCase().includes(term);
+        const reporterName = `${job.reporter_first_name} ${job.reporter_last_name}`.toLowerCase();
+        return (
+            job.device_name.toLowerCase().includes(term) || 
+            job.problem_detail.toLowerCase().includes(term) || 
+            job.location.toLowerCase().includes(term) ||
+            reporterName.includes(term)
+        );
     });
+
+    // ✅ คำนวณ Pagination
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentJobs = filteredJobs.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
 
     return (
         <div className="container" style={{marginTop: '20px'}}>
@@ -63,7 +80,7 @@ function Dashboard() {
             <div className="card no-print" style={{padding:'15px', marginBottom:'20px'}}>
                 <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
                     <span style={{fontSize:'1.2rem'}}>🔍</span>
-                    <input type="text" className="input-modern" placeholder="ค้นหาชื่องาน..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{maxWidth: '100%', margin: 0}} />
+                    <input type="text" className="input-modern" placeholder="ค้นหาชื่องาน, อาการ, ผู้แจ้ง..." value={searchTerm} onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(1);}} style={{maxWidth: '100%', margin: 0}} />
                 </div>
             </div>
 
@@ -76,25 +93,24 @@ function Dashboard() {
                             <th>อุปกรณ์</th>
                             <th>อาการ</th>
                             <th>สถานที่</th>
+                            <th>ผู้แจ้ง</th>
                             <th style={{textAlign:'center'}}>สถานะ</th>
-                            <th style={{textAlign: 'center', width: '160px'}}>จัดการ</th> {/* ✅ เพิ่มความกว้างคอลัมน์นิดหน่อย */}
+                            <th style={{textAlign: 'center', width: '160px'}} className="no-print">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredJobs.map((job, index) => (
+                        {currentJobs.map((job, index) => (
                             <tr key={job.id}>
-                                <td style={{textAlign: 'center'}}>{index + 1}</td>
+                                <td style={{textAlign: 'center'}}>{indexOfFirstItem + index + 1}</td>
                                 <td>{new Date(job.date_created).toLocaleDateString('th-TH')}</td>
                                 <td>{job.device_name}</td>
                                 <td style={{maxWidth:'200px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}} title={job.problem_detail}>{job.problem_detail}</td>
                                 <td>{job.location}</td>
+                                <td>{job.reporter_first_name} {job.reporter_last_name}</td>
                                 <td style={{textAlign:'center'}}><span className={`status-badge ${job.status === 'done' ? 'status-done' : job.status === 'doing' ? 'status-doing' : 'status-pending'}`}>{job.status === 'done' ? '✅ เสร็จสิ้น' : job.status === 'doing' ? '🛠 กำลังซ่อม' : '⏳ รอรับเรื่อง'}</span></td>
                                 
-                                {/* ✅ แก้ไขส่วนปุ่มจัดการ: ใช้ Flexbox + ปุ่มขนาดเล็ก */}
-                                <td style={{textAlign: 'center'}}>
+                                <td style={{textAlign: 'center'}} className="no-print">
                                     <div style={{display: 'flex', justifyContent: 'center', gap: '5px'}}>
-                                        
-                                        {/* ปุ่มรายละเอียด (สีฟ้า เล็ก) */}
                                         <button 
                                             onClick={() => navigate(`/job/${job.id}`)}
                                             style={{
@@ -102,12 +118,10 @@ function Dashboard() {
                                                 padding: '4px 8px', borderRadius: '4px', cursor: 'pointer',
                                                 fontSize: '0.8rem', whiteSpace: 'nowrap'
                                             }}
-                                            title="ดูรายละเอียด"
                                         >
                                             📄 รายละเอียด
                                         </button>
                                         
-                                        {/* ปุ่มมอบหมายงาน (สีส้ม เล็ก) - แสดงเฉพาะตอน Pending */}
                                         {(currentUser.role === 'supervisor' || currentUser.role === 'admin') && job.status === 'pending' && (
                                             <button 
                                                 onClick={() => handleOpenAssign(job.id)}
@@ -116,19 +130,26 @@ function Dashboard() {
                                                     padding: '4px 8px', borderRadius: '4px', cursor: 'pointer',
                                                     fontSize: '0.8rem', whiteSpace: 'nowrap', display:'flex', alignItems:'center', gap:'2px'
                                                 }}
-                                                title="มอบหมายงานให้ช่าง"
                                             >
                                                 👷 มอบหมาย
                                             </button>
                                         )}
                                     </div>
                                 </td>
-
                             </tr>
                         ))}
-                         {filteredJobs.length === 0 && <tr><td colSpan="7" style={{textAlign:'center', padding:'20px', color:'#999'}}>ไม่มีข้อมูล</td></tr>}
+                         {currentJobs.length === 0 && <tr><td colSpan="8" style={{textAlign:'center', padding:'20px', color:'#999'}}>ไม่พบข้อมูล</td></tr>}
                     </tbody>
                 </table>
+                
+                {/* ✅ Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="no-print" style={{display:'flex', justifyContent:'center', padding:'15px', gap:'10px', alignItems:'center'}}>
+                        <button className="btn-sm" disabled={currentPage===1} onClick={()=>setCurrentPage(p=>p-1)} style={{cursor: currentPage===1?'not-allowed':'pointer'}}>&lt; ก่อนหน้า</button>
+                        <span> หน้า {currentPage} จาก {totalPages} </span>
+                        <button className="btn-sm" disabled={currentPage===totalPages} onClick={()=>setCurrentPage(p=>p+1)} style={{cursor: currentPage===totalPages?'not-allowed':'pointer'}}>ถัดไป &gt;</button>
+                    </div>
+                )}
             </div>
 
             {/* Modal เลือกช่าง */}

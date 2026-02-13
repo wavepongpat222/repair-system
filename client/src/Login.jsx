@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import './App.css';
 
 function Login() {
@@ -16,43 +17,69 @@ function Login() {
                 if(res.data.status === "Login Success") {
                     localStorage.setItem('user', JSON.stringify(res.data.user));
                     const role = res.data.user.role;
-
-                    // --- แยกทางเข้าตาม Role ---
-                    if (role === 'admin') {
-                        navigate('/admin-dashboard'); // Admin ไปหน้าจัดการ User
-                    } else if (role === 'user') {
-                        navigate('/create');
-                    } else if (role === 'inventory') {
-                        navigate('/inventory-dashboard');
-                    } else {
-                        navigate('/dashboard'); // Supervisor, Technician ไปหน้างานซ่อม
-                    }
                     
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'เข้าสู่ระบบสำเร็จ',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                         if (role === 'admin') navigate('/admin-dashboard');
+                         else if (role === 'user') navigate('/create');
+                         else if (role === 'inventory') navigate('/inventory-dashboard');
+                         else if (role === 'technician') navigate('/my-tasks');
+                         else navigate('/dashboard');
+                    });
                 } else {
-                    alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง ❌");
+                    Swal.fire('ข้อผิดพลาด', 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error');
                 }
             })
             .catch(err => console.log(err));
     }
 
+    const handleForgotPassword = () => {
+        navigate('/forgot-password'); // ✅ ลิ้งค์ไปหน้ากรอกอีเมล
+    }
+
     return (
-        <div className="container" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '30px' }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>🔐 ระบบแจ้งซ่อม</h2>
+        // ✅ ใช้ Class Name ที่ตรงกับ CSS ใหม่
+        <div className="login-container">
+            <div className="login-card">
+                <div className="login-icon">🔧</div>
+                <h2 className="login-title">เข้าสู่ระบบแจ้งซ่อม</h2>
+
                 <form onSubmit={handleSubmit}>
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                    <div className="form-group">
                         <label>Username</label>
-                        <input type="text" className="form-control" placeholder="กรอกชื่อผู้ใช้" required onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                        <input 
+                            type="text" 
+                            className="form-control" 
+                            required 
+                            onChange={e => setUsername(e.target.value)} 
+                        />
                     </div>
-                    <div className="form-group" style={{ marginBottom: '25px' }}>
+                    <div className="form-group">
                         <label>Password</label>
-                        <input type="password" className="form-control" placeholder="กรอกรหัสผ่าน" required onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                        <input 
+                            type="password" 
+                            className="form-control" 
+                            required 
+                            onChange={e => setPassword(e.target.value)} 
+                        />
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px', fontSize: '1rem', fontWeight: 'bold' }}>เข้าสู่ระบบ</button>
+                    
+                    <button type="submit" className="btn-primary">เข้าสู่ระบบ</button>
+                    
+                    <p 
+                        style={{textAlign:'center', marginTop:'15px', fontSize:'0.9rem', cursor:'pointer', color:'#3b82f6'}} 
+                        onClick={handleForgotPassword}
+                    >
+                        ลืมรหัสผ่าน?
+                    </p>
                 </form>
             </div>
         </div>
-    )
+    );
 }
 
 export default Login;
