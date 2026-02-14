@@ -39,7 +39,7 @@ function CreateRepair() {
         formData.append('location', location);
         
         if (file) {
-            formData.append('repair_image', file);
+            formData.append('before_image', file);
         }
 
         axios.post('http://localhost:3001/add-repair', formData, {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api เรียบร้อย
+import api from './api'; 
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './App.css';
@@ -7,18 +7,20 @@ import './App.css';
 function MaterialApprovals() {
     const [requests, setRequests] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
-    const [activeTab, setActiveTab] = useState('pending'); // pending = งานที่ต้องทำ, history = ประวัติ
+    const [activeTab, setActiveTab] = useState('pending'); 
     const navigate = useNavigate();
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || !['supervisor', 'admin', 'inventory'].includes(user.role)) { navigate('/'); return; }
+        if (!user || !['supervisor', 'admin', 'inventory'].includes(user.role)) { 
+            navigate('/'); 
+            return; 
+        }
         setCurrentUser(user);
         fetchRequests();
-    }, []);
+    }, [navigate]);
 
     const fetchRequests = () => {
-        // ✅ เปลี่ยนเป็น api.get และตัด localhost ออก
         api.get('/all-withdrawal-requests')
         .then(res => setRequests(res.data))
         .catch(err => console.log(err));
@@ -32,10 +34,10 @@ function MaterialApprovals() {
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#3b82f6',
-            confirmButtonText: 'อนุมัติ'
+            confirmButtonText: 'อนุมัติ',
+            cancelButtonText: 'ยกเลิก'
         }).then((result) => {
             if (result.isConfirmed) {
-                // ✅ เปลี่ยนเป็น api.put
                 api.put('/supervisor-approve', { id }).then(res => {
                     if (res.data === "Success") {
                         Swal.fire('สำเร็จ', 'อนุมัติเรียบร้อย', 'success');
@@ -54,10 +56,10 @@ function MaterialApprovals() {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
-            confirmButtonText: 'ยืนยันการจ่าย'
+            confirmButtonText: 'ยืนยันการจ่าย',
+            cancelButtonText: 'ยกเลิก'
         }).then((result) => {
             if (result.isConfirmed) {
-                // ✅ เปลี่ยนเป็น api.put
                 api.put('/inventory-confirm', { id }).then(res => {
                     if (res.data === "Success") {
                         Swal.fire('สำเร็จ', 'ตัดสต็อกและบันทึกสถานะเรียบร้อย', 'success');
@@ -72,7 +74,6 @@ function MaterialApprovals() {
         });
     }
 
-    // --- Action ปฏิเสธ (ใช้ได้ทั้งคู่) ---
     const clickReject = (id) => {
         Swal.fire({
             title: 'ปฏิเสธคำขอ?',
@@ -82,10 +83,10 @@ function MaterialApprovals() {
             inputPlaceholder: 'ระบุเหตุผล (ถ้ามี)...',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            confirmButtonText: 'ปฏิเสธ'
+            confirmButtonText: 'ปฏิเสธ',
+            cancelButtonText: 'ยกเลิก'
         }).then((result) => {
             if (result.isConfirmed) {
-                // ✅ เปลี่ยนเป็น api.put
                 api.put('/reject-withdrawal', { id }).then(res => {
                     if (res.data === "Success") {
                         Swal.fire('เรียบร้อย', 'ปฏิเสธคำขอแล้ว', 'success');
@@ -96,10 +97,8 @@ function MaterialApprovals() {
         });
     }
 
-    // ✅ ฟิลเตอร์ข้อมูลตาม Role และ Tab (โค้ดเดิมของคุณทั้งหมด)
     const filteredRequests = requests.filter(r => {
         if (!currentUser) return false;
-
         if (activeTab === 'pending') {
             if (currentUser.role === 'supervisor') return r.status === 'pending';
             if (currentUser.role === 'inventory') return r.status === 'approved_by_sup';
@@ -128,18 +127,18 @@ function MaterialApprovals() {
                 </div>
             </div>
 
-            <div className="card" style={{padding: '0', overflow: 'hidden'}}>
+            <div className="card" style={{padding: '0', overflow: 'hidden', border: '1px solid #e5e7eb'}}>
                 <table className="custom-table">
                     <thead>
-                        <tr>
-                            <th style={{textAlign:'center'}}>#</th>
+                        <tr style={{backgroundColor: '#f9fafb'}}>
+                            <th style={{textAlign:'center', width:'60px'}}>#</th>
                             <th>วันที่</th>
                             <th>ผู้เบิก</th>
                             <th>งานซ่อม (อุปกรณ์)</th>
                             <th>รายการวัสดุ</th>
                             <th style={{textAlign:'center'}}>จำนวน</th>
                             <th style={{textAlign:'center'}}>สถานะ</th>
-                            <th style={{textAlign:'center'}}>จัดการ</th>
+                            {/* ❌ เอาหัวข้อคอลัมน์ "จัดการ" ออกถาวร */}
                         </tr>
                     </thead>
                     <tbody>
@@ -149,7 +148,7 @@ function MaterialApprovals() {
                                 <td>{new Date(r.date_requested).toLocaleString('th-TH')}</td>
                                 <td>{r.first_name} {r.last_name}</td>
                                 <td>{r.device_name}</td>
-                                <td>{r.material_name}</td>
+                                <td style={{fontWeight:'500'}}>{r.material_name}</td>
                                 <td style={{textAlign:'center', fontWeight:'bold'}}>{r.quantity} {r.unit}</td>
                                 <td style={{textAlign:'center'}}>
                                     {r.status === 'pending' && <span className="status-badge status-pending">รอหัวหน้าอนุมัติ</span>}
@@ -157,28 +156,10 @@ function MaterialApprovals() {
                                     {(r.status === 'approved' || r.status === 'completed') && <span className="status-badge status-done">✅ จ่ายแล้ว</span>}
                                     {r.status === 'rejected' && <span className="status-badge" style={{backgroundColor: '#fee2e2', color: '#b91c1c'}}>❌ ไม่อนุมัติ</span>}
                                 </td>
-                                <td style={{textAlign:'center'}}>
-                                    {activeTab === 'pending' && (
-                                        <div style={{display:'flex', justifyContent:'center', gap:'5px'}}>
-                                            {(currentUser.role === 'supervisor' || currentUser.role === 'admin') && r.status === 'pending' && (
-                                                <>
-                                                    <button onClick={() => clickApprove(r.id)} className="btn-sm" style={{backgroundColor:'#3b82f6', color:'white'}}>✓ อนุมัติ</button>
-                                                    <button onClick={() => clickReject(r.id)} className="btn-sm" style={{backgroundColor:'#ef4444', color:'white'}}>✕</button>
-                                                </>
-                                            )}
-                                            {(currentUser.role === 'inventory' || currentUser.role === 'admin') && r.status === 'approved_by_sup' && (
-                                                <>
-                                                    <button onClick={() => clickInventoryConfirm(r.id)} className="btn-sm" style={{backgroundColor:'#10b981', color:'white'}}>📦 ยืนยันจ่าย</button>
-                                                    <button onClick={() => clickReject(r.id)} className="btn-sm" style={{backgroundColor:'#ef4444', color:'white'}}>✕</button>
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
-                                    {activeTab === 'history' && <span style={{color:'#999'}}>-</span>}
-                                </td>
+                                {/* ❌ เอาช่องใส่ปุ่มจัดการออกถาวร */}
                             </tr>
                         )) : (
-                            <tr><td colSpan="8" style={{textAlign: 'center', padding: '20px', color: '#999'}}>ไม่มีรายการ</td></tr>
+                            <tr><td colSpan="7" style={{textAlign: 'center', padding: '30px', color: '#999'}}>ไม่มีรายการ</td></tr>
                         )}
                     </tbody>
                 </table>

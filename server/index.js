@@ -11,11 +11,11 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ 1. ตั้งค่า CORS ให้เปิดรับทุกโดเมน (ถูกต้องแล้วสำหรับ ngrok)
+// ✅ 1. ตั้งค่า CORS ให้เปิดรับทุกโดเมน
 app.use(cors()); 
 
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
@@ -168,10 +168,13 @@ app.get('/technicians', (req, res) => {
 // ZONE: REPAIR REQUESTS (งานซ่อม)
 // ==========================================
 
-app.post('/add-repair', upload.single('repair_image'), (req, res) => {
+// ✅ 1. แก้ไข: รับไฟล์ 'before_image' แทน 'repair_image'
+app.post('/add-repair', upload.single('before_image'), (req, res) => {
     const { user_id, device_name, problem_detail, location } = req.body;
     const image_filename = req.file ? req.file.filename : null;
-    const sql = "INSERT INTO repair_request (device_name, problem_detail, location, status, reporter_id, repair_image, date_created) VALUES (?, ?, ?, 'pending', ?, ?, NOW())";
+    
+    // เปลี่ยนชื่อคอลัมน์ใน SQL เป็น before_image
+    const sql = "INSERT INTO repair_request (device_name, problem_detail, location, status, reporter_id, before_image, date_created) VALUES (?, ?, ?, 'pending', ?, ?, NOW())";
     
     db.query(sql, [device_name, problem_detail, location, user_id, image_filename], (err, result) => {
         if(err) { console.log(err); return res.json("Error"); }
@@ -238,13 +241,15 @@ app.get('/job/:id', (req, res) => {
     });
 });
 
-app.put('/update-job', upload.single('repair_image'), (req, res) => {
+// ✅ 2. แก้ไข: รับไฟล์ 'after_image' เมื่ออัปเดตงาน
+app.put('/update-job', upload.single('after_image'), (req, res) => {
     const { id, status } = req.body;
     let sql = "UPDATE repair_request SET status = ? WHERE id = ?";
     let params = [status, id];
 
     if (req.file) {
-        sql = "UPDATE repair_request SET status = ?, repair_image = ? WHERE id = ?";
+        // ถ้ามีไฟล์แนบมา ให้อัปเดตลงคอลัมน์ after_image
+        sql = "UPDATE repair_request SET status = ?, after_image = ? WHERE id = ?";
         params = [status, req.file.filename, id];
     }
 
@@ -275,9 +280,10 @@ app.put('/update-job', upload.single('repair_image'), (req, res) => {
     });
 });
 
+// ✅ 3. แก้ไข: ลบรูปก่อนซ่อม (before_image) แทน repair_image
 app.put('/delete-job-image', (req, res) => {
     const { id } = req.body;
-    const sql = "UPDATE repair_request SET repair_image = NULL WHERE id = ?";
+    const sql = "UPDATE repair_request SET before_image = NULL WHERE id = ?";
     db.query(sql, [id], (err, result) => {
         if(err) return res.json(err);
         return res.json("Success");
@@ -461,9 +467,8 @@ app.post('/forgot-password', (req, res) => {
         [token, expireDate, email], (err, updateRes) => {
             if(err) return res.json(err);
 
-            // ✅ แก้ไข: ใช้ URL ของ ngrok (Frontend) ที่คุณส่งรูปมาให้
-            // ถ้าคุณปิด/เปิด ngrok ใหม่ เลขข้างหน้าจะเปลี่ยน ต้องมาแก้บรรทัดนี้ใหม่นะครับ
-            const resetLink = `https://480c-2403-6200-8838-a490-7c50-941-d23e-f4b5.ngrok-free.app/reset-password?token=${token}`;
+            const frontend_url = 'https://3afa-2403-6200-8838-a490-2c44-1ee7-adcd-bd26.ngrok-free.app'; 
+            const resetLink = `${frontend_url}/reset-password?token=${token}`;
             
             sendEmailNoti(
                 email,

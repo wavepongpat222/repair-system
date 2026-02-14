@@ -73,7 +73,7 @@ function RepairHistory() {
                             <th>อุปกรณ์</th>
                             <th>อาการ</th>
                             <th>สถานะ</th>
-                            <th style={{textAlign: 'center', width: '180px'}}>จัดการ</th>
+                            <th style={{textAlign: 'center'}}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -85,10 +85,10 @@ function RepairHistory() {
                                 <td>{repair.problem_detail}</td>
                                 <td><span className={`status-badge ${repair.status === 'done' ? 'status-done' : repair.status === 'doing' ? 'status-doing' : 'status-pending'}`}>{repair.status === 'done' ? '✅ เสร็จสิ้น' : repair.status === 'doing' ? '🛠 กำลังซ่อม' : '⏳ รอรับเรื่อง'}</span></td>
                                 <td style={{textAlign: 'center'}}>
-                                    <div style={{display: 'flex', gap: '5px', justifyContent: 'center'}}>
-                                        <button onClick={() => navigate(`/job/${repair.id}`)} className="btn-sm btn-primary">📄 ดูข้อมูล</button>
+                                    <div className="action-group">
+                                        <button onClick={() => navigate(`/job/${repair.id}`)} className="btn-sm btn-view">📄 ดูข้อมูล</button>
                                         {repair.status === 'pending' && (
-                                            <button onClick={() => handleClickCancel(repair.id)} className="btn-sm" style={{backgroundColor: '#fee2e2', color: '#b91c1c', border:'1px solid #fca5a5'}}>❌ ยกเลิก</button>
+                                            <button onClick={() => handleClickCancel(repair.id)} className="btn-sm btn-cancel">❌ ยกเลิก</button>
                                         )}
                                     </div>
                                 </td>
@@ -101,9 +101,9 @@ function RepairHistory() {
                 {/* ✅ Pagination Controls */}
                 {totalPages > 1 && (
                     <div className="no-print" style={{display:'flex', justifyContent:'center', padding:'20px', gap:'15px', alignItems:'center', background:'#fafafa', borderTop:'1px solid #eee'}}>
-                        <button className="btn-sm btn-secondary" disabled={currentPage===1} onClick={()=>setCurrentPage(p=>p-1)}>&lt; ก่อนหน้า</button>
+                        <button className="btn-sm btn-secondary" disabled={currentPage===1} onClick={()=>setCurrentPage(p=>p-1)} style={{cursor: currentPage===1?'not-allowed':'pointer'}}>&lt; ก่อนหน้า</button>
                         <span style={{fontWeight:'500', color:'#555'}}> หน้า {currentPage} จาก {totalPages} </span>
-                        <button className="btn-sm btn-secondary" disabled={currentPage===totalPages} onClick={()=>setCurrentPage(p=>p+1)}>ถัดไป &gt;</button>
+                        <button className="btn-sm btn-secondary" disabled={currentPage===totalPages} onClick={()=>setCurrentPage(p=>p+1)} style={{cursor: currentPage===totalPages?'not-allowed':'pointer'}}>ถัดไป &gt;</button>
                     </div>
                 )}
             </div>
@@ -111,12 +111,12 @@ function RepairHistory() {
             {/* Popup ยกเลิก */}
             {showCancelModal && (
                 <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-                    <div className="modal-box" style={{backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '90%', maxWidth: '350px', textAlign: 'center'}}>
+                    <div className="modal-box" style={{backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '90%', maxWidth: '350px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.2)'}}>
                         <h3 style={{marginTop: 0, color:'#333'}}>ยกเลิกรายการ?</h3>
                         <p style={{color: '#666', marginBottom: '25px'}}>ต้องการยกเลิกการแจ้งซ่อมนี้ใช่ไหม?</p>
                         <div style={{display: 'flex', gap: '10px'}}>
-                            <button onClick={confirmCancel} className="btn-sm" style={{flex: 1, backgroundColor: '#ef4444', color: 'white', padding:'10px', fontSize:'1rem'}}>ใช่, ยกเลิกเลย</button>
-                            <button onClick={() => setShowCancelModal(false)} className="btn-sm" style={{flex: 1, backgroundColor: '#e5e7eb', color: '#374151', padding:'10px', fontSize:'1rem'}}>ไม่</button>
+                            <button onClick={confirmCancel} className="btn-sm btn-cancel" style={{flex: 1, padding:'10px', fontSize:'1rem'}}>ใช่, ยกเลิกเลย</button>
+                            <button onClick={() => setShowCancelModal(false)} className="btn-sm btn-secondary" style={{flex: 1, padding:'10px', fontSize:'1rem', color:'#333 !important'}}>ไม่</button>
                         </div>
                     </div>
                 </div>

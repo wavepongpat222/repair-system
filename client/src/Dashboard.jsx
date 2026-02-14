@@ -98,7 +98,7 @@ function Dashboard() {
                             <th>สถานที่</th>
                             <th>ผู้แจ้ง</th>
                             <th style={{textAlign:'center'}}>สถานะ</th>
-                            <th style={{textAlign: 'center', width: '160px'}} className="no-print">จัดการ</th>
+                            <th style={{textAlign: 'center'}} className="no-print">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -113,11 +113,11 @@ function Dashboard() {
                                 <td style={{textAlign:'center'}}><span className={`status-badge ${job.status === 'done' ? 'status-done' : job.status === 'doing' ? 'status-doing' : 'status-pending'}`}>{job.status === 'done' ? '✅ เสร็จสิ้น' : job.status === 'doing' ? '🛠 กำลังซ่อม' : '⏳ รอรับเรื่อง'}</span></td>
                                 
                                 <td style={{textAlign: 'center'}} className="no-print">
-                                    <div style={{display: 'flex', justifyContent: 'center', gap: '5px'}}>
-                                        <button onClick={() => navigate(`/job/${job.id}`)} className="btn-sm btn-primary">📄 รายละเอียด</button>
+                                    <div className="action-group">
+                                        <button onClick={() => navigate(`/job/${job.id}`)} className="btn-sm btn-view">📄 รายละเอียด</button>
                                         
                                         {(currentUser?.role === 'supervisor' || currentUser?.role === 'admin') && job.status === 'pending' && (
-                                            <button onClick={() => {setAssignModal({ show: true, jobId: job.id }); setSelectedTech('');}} className="btn-sm" style={{backgroundColor: '#f59e0b', color: 'white', border:'none'}}>
+                                            <button onClick={() => {setAssignModal({ show: true, jobId: job.id }); setSelectedTech('');}} className="btn-sm btn-edit">
                                                 👷 มอบหมาย
                                             </button>
                                         )}
@@ -129,7 +129,7 @@ function Dashboard() {
                     </tbody>
                 </table>
                 
-                {/* ✅ ปุ่มเปลี่ยนหน้า (Pagination) */}
+                {/* ✅ Pagination Controls */}
                 {totalPages > 1 && (
                     <div className="no-print" style={{display:'flex', justifyContent:'center', padding:'20px', gap:'15px', alignItems:'center', background:'#fafafa', borderTop:'1px solid #eee'}}>
                         <button className="btn-sm btn-secondary" disabled={currentPage===1} onClick={()=>setCurrentPage(p=>p-1)} style={{cursor: currentPage===1?'not-allowed':'pointer'}}>&lt; ก่อนหน้า</button>

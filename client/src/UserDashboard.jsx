@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from './api'; // ✅ เปลี่ยนจาก axios เป็น api
+import api from './api';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
@@ -7,7 +7,7 @@ function UserDashboard() {
     const [deviceName, setDeviceName] = useState('');
     const [problemDetail, setProblemDetail] = useState('');
     const [location, setLocation] = useState('');
-    const [image, setImage] = useState(null);
+    const [beforeImage, setBeforeImage] = useState(null); // ✅ เปลี่ยนชื่อตัวแปร
     const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
 
@@ -19,17 +19,15 @@ function UserDashboard() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (deviceName === "") { alert("กรุณาเลือกชื่ออุปกรณ์"); return; }
-        if (location === "") { alert("กรุณาเลือกสถานที่"); return; }
-
         const formData = new FormData();
         formData.append('user_id', currentUser.user_id);
         formData.append('device_name', deviceName);
         formData.append('problem_detail', problemDetail);
         formData.append('location', location);
-        if (image) formData.append('repair_image', image);
+        
+        // ✅ ส่งเป็น key 'before_image'
+        if (beforeImage) formData.append('before_image', beforeImage);
 
-        // ✅ เปลี่ยนเป็น api.post และตัด URL ส่วนเกินออก
         api.post('/add-repair', formData)
             .then(res => {
                 if(res.data === "Success") {
@@ -49,6 +47,7 @@ function UserDashboard() {
                     <h3>🔧 แจ้งซ่อมอุปกรณ์ใหม่</h3>
                 </div>
                 <form onSubmit={handleSubmit} className="modern-form">
+                    {/* ... (ส่วน input อื่นๆ เหมือนเดิม) ... */}
                     <div className="form-group-modern">
                         <label>ชื่ออุปกรณ์ / ประเภท</label>
                         <select className="input-modern" value={deviceName} onChange={e => setDeviceName(e.target.value)} required>
@@ -57,36 +56,31 @@ function UserDashboard() {
                             <option value="Notebook">โน้ตบุ๊ก (Notebook)</option>
                             <option value="Printer">เครื่องพิมพ์ (Printer/Scanner)</option>
                             <option value="Network/WiFi">อินเทอร์เน็ต / WiFi</option>
-                            <option value="Software/Program">โปรแกรม / ซอฟต์แวร์</option>
-                            <option value="Monitor">หน้าจอ (Monitor)</option>
-                            <option value="UPS">เครื่องสำรองไฟ (UPS)</option>
                             <option value="Other">อื่นๆ</option>
                         </select>
                     </div>
                     <div className="form-group-modern">
-                        <label>สถานที่ / แผนก</label>
+                        <label>สถานที่</label>
                         <select className="input-modern" value={location} onChange={e => setLocation(e.target.value)} required>
                             <option value="">-- กรุณาเลือกสถานที่ --</option>
                             <option value="อาคารสำนักงาน - ชั้น 1">อาคารสำนักงาน - ชั้น 1</option>
-                            <option value="อาคารสำนักงาน - ชั้น 2">อาคารสำนักงาน - ชั้น 2</option>
-                            <option value="แผนกบัญชี/การเงิน">แผนกบัญชี/การเงิน</option>
-                            <option value="แผนกบุคคล (HR)">แผนกบุคคล (HR)</option>
-                            <option value="ฝ่ายผลิต (Production)">ฝ่ายผลิต (Production)</option>
-                            <option value="คลังสินค้า (Warehouse)">คลังสินค้า (Warehouse)</option>
-                            <option value="ห้อง Server / IT">ห้อง Server / IT</option>
-                            <option value="ป้อมรปภ.">ป้อมรปภ.</option>
+                            <option value="ฝ่ายผลิต">ฝ่ายผลิต</option>
+                            <option value="อื่นๆ">อื่นๆ</option>
                         </select>
                     </div>
                     <div className="form-group-modern">
                         <label>รายละเอียดปัญหา</label>
-                        <textarea className="input-modern" rows="4" placeholder="อาการเป็นอย่างไร..." value={problemDetail} onChange={e => setProblemDetail(e.target.value)} required></textarea>
+                        <textarea className="input-modern" rows="4" value={problemDetail} onChange={e => setProblemDetail(e.target.value)} required></textarea>
                     </div>
+
+                    {/* ✅ แก้ไขส่วนอัปโหลดรูป */}
                     <div className="form-group-modern">
-                        <label>รูปภาพประกอบ (ถ้ามี)</label>
+                        <label>📸 รูปภาพก่อนซ่อม (Before)</label>
                         <div className="file-input-wrapper">
-                            <input type="file" id="fileInput" className="input-file-modern" onChange={e => setImage(e.target.files[0])} />
+                            <input type="file" className="input-file-modern" onChange={e => setBeforeImage(e.target.files[0])} />
                         </div>
                     </div>
+
                     <button type="submit" className="btn-submit-modern">ส่งแจ้งซ่อม</button>
                 </form>
             </div>

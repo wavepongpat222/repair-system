@@ -10,7 +10,6 @@ function InventoryDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
-    // ✅ State สำหรับ Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
 
@@ -21,7 +20,7 @@ function InventoryDashboard() {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'inventory') { navigate('/'); return; }
         fetchMaterials();
-    }, []);
+    }, [navigate]);
 
     const fetchMaterials = () => {
         api.get('/materials')
@@ -29,10 +28,18 @@ function InventoryDashboard() {
             .catch(err => console.log(err));
     }
 
+    const hasNumber = (str) => /\d/.test(str);
+
     const handleAdd = (e) => {
         e.preventDefault();
-        if (/\d/.test(newMaterial.unit)) {
-            Swal.fire('ข้อมูลไม่ถูกต้อง', 'หน่วยนับต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข', 'warning');
+        
+        if (hasNumber(newMaterial.unit)) {
+            Swal.fire({
+                title: 'ข้อมูลไม่ถูกต้อง',
+                text: 'หน่วยนับต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข',
+                icon: 'warning',
+                confirmButtonColor: '#3b82f6'
+            });
             return;
         }
 
@@ -49,6 +56,22 @@ function InventoryDashboard() {
 
     const handleUpdateMaterial = (e) => {
         e.preventDefault();
+
+        if (hasNumber(editingMaterial.unit)) {
+            // ✅ แก้ไข: เพิ่ม didOpen เพื่อบังคับให้แจ้งเตือนอยู่หน้าสุด (zIndex)
+            Swal.fire({
+                title: 'ข้อมูลไม่ถูกต้อง',
+                text: 'หน่วยนับต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข',
+                icon: 'warning',
+                confirmButtonColor: '#3b82f6',
+                // บังคับให้ลอยทับทุกอย่าง
+                didOpen: () => {
+                    Swal.getContainer().style.zIndex = "10000";
+                }
+            });
+            return;
+        }
+
         api.put('/update-material', {
             id: editingMaterial.id,
             name: editingMaterial.name,
@@ -56,14 +79,41 @@ function InventoryDashboard() {
             unit: editingMaterial.unit
         }).then(res => {
             if(res.data === "Success") {
-                Swal.fire('สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', 'success');
+                Swal.fire({
+                    title: 'สำเร็จ',
+                    text: 'แก้ไขข้อมูลเรียบร้อย',
+                    icon: 'success',
+                    didOpen: () => { Swal.getContainer().style.zIndex = "10000"; }
+                });
                 setIsEditModalOpen(false);
                 fetchMaterials();
             }
         });
     }
 
-    // --- Logic การกรองและแบ่งหน้า ---
+    const handleDeleteMaterial = (id) => {
+        Swal.fire({
+            title: 'ยืนยันการลบวัสดุ?',
+            text: "ข้อมูลวัสดุนี้จะถูกลบออกจากคลังถาวร",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'ลบเลย',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                api.delete('/delete-material/' + id).then(res => {
+                    if (res.data === "Success") {
+                        Swal.fire('ลบแล้ว', 'ลบวัสดุเรียบร้อย', 'success');
+                        fetchMaterials();
+                    }
+                }).catch(err => {
+                    Swal.fire('Error', 'ไม่สามารถลบได้ เนื่องจากมีการใช้งานวัสดุนี้ในระบบ', 'error');
+                });
+            }
+        });
+    }
+
     const filteredMaterials = materials.filter(m => 
         m.material_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -78,8 +128,6 @@ function InventoryDashboard() {
             <h2 style={{textAlign: 'left', marginBottom: '20px'}}>📦 จัดการคลังวัสดุอุปกรณ์</h2>
 
             <div style={{display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap:'wrap'}}>
-                
-                {/* ตารางรายการวัสดุ (ซ้าย) */}
                 <div style={{flex: 2, minWidth:'300px'}}>
                     <div className="card no-print" style={{padding:'15px', marginBottom:'20px'}}>
                          <div style={{display:'flex', alignItems:'center', gap:'10px', background:'#f8fafc', padding:'8px 15px', borderRadius:'50px', border:'1px solid #e2e8f0', maxWidth:'400px'}}>
@@ -89,12 +137,12 @@ function InventoryDashboard() {
                                 placeholder="ค้นหาชื่อวัสดุ..." 
                                 value={searchTerm}
                                 onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(1);}}
-                                style={{border:'none', background:'transparent', outline:'none', width:'100%'}}
+                                style={{border:'none', background:'transparent', outline:'none', width:'100%', fontSize:'1rem'}}
                             />
                         </div>
                     </div>
 
-                    <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                    <div className="card" style={{ padding: '0', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
                         <table className="custom-table">
                             <thead>
                                 <tr style={{backgroundColor: '#f9fafb'}}>
@@ -115,7 +163,20 @@ function InventoryDashboard() {
                                         </td>
                                         <td style={{textAlign: 'center'}}>{m.unit}</td>
                                         <td style={{textAlign: 'center'}} className="no-print">
-                                            <button onClick={() => {setEditingMaterial({id: m.id, name: m.material_name, qty: m.quantity, unit: m.unit}); setIsEditModalOpen(true);}} className="btn-sm btn-secondary" style={{marginRight:'5px'}}>✏️ แก้ไข</button>
+                                            <div className="action-group">
+                                                <button 
+                                                    onClick={() => {setEditingMaterial({id: m.id, name: m.material_name, qty: m.quantity, unit: m.unit}); setIsEditModalOpen(true);}} 
+                                                    className="btn-sm btn-edit"
+                                                >
+                                                    ✏️ แก้ไข
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteMaterial(m.id)} 
+                                                    className="btn-sm btn-delete"
+                                                >
+                                                    🗑️ ลบ
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -123,18 +184,16 @@ function InventoryDashboard() {
                             </tbody>
                         </table>
 
-                        {/* ✅ Pagination Controls */}
                         {totalPages > 1 && (
                             <div className="no-print" style={{display:'flex', justifyContent:'center', padding:'20px', gap:'15px', alignItems:'center', background:'#fafafa', borderTop:'1px solid #eee'}}>
                                 <button className="btn-sm btn-secondary" disabled={currentPage===1} onClick={()=>setCurrentPage(p=>p-1)}>&lt; ก่อนหน้า</button>
-                                <span style={{fontWeight:'500', color:'#555'}}> หน้า {currentPage} จาก {totalPages} </span>
+                                <span style={{fontWeight:'500', color:'#555', fontSize:'0.9rem'}}> หน้า {currentPage} จาก {totalPages} </span>
                                 <button className="btn-sm btn-secondary" disabled={currentPage===totalPages} onClick={()=>setCurrentPage(p=>p+1)}>ถัดไป &gt;</button>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* ฟอร์มเพิ่มวัสดุใหม่ (ขวา) */}
                 <div className="card no-print" style={{flex: 1, padding: '20px', minWidth:'250px'}}>
                     <h4 style={{marginTop:0, borderBottom:'1px solid #eee', paddingBottom:'10px'}}>+ เพิ่มวัสดุใหม่</h4>
                     <form onSubmit={handleAdd}>
@@ -146,7 +205,7 @@ function InventoryDashboard() {
                 </div>
             </div>
 
-            {/* Modal Edit */}
+            {/* Modal Edit (zIndex: 9999) */}
             {isEditModalOpen && (
                 <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
                     <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '400px', maxWidth:'90%', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>

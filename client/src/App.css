@@ -432,3 +432,51 @@ input, select, textarea, .input-modern {
     color: #999999 !important;
     opacity: 1; /* Firefox ต้องการค่านี้ */
 }
+.action-group {
+    display: flex;
+    gap: 5px;           /* ระยะห่างระหว่างปุ่ม */
+    justify-content: center; 
+    align-items: center;
+}
+
+.btn-sm {
+    padding: 5px 10px !important;  /* ขนาดปุ่มเล็กลง */
+    font-size: 13px !important;    /* ตัวหนังสือเล็กลง */
+    border-radius: 6px !important;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1.2;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 65px;
+    color: white !important;
+    text-decoration: none;
+}
+
+/* สีปุ่มฟ้า (ดูข้อมูล/รายละเอียด) */
+.btn-view {
+    background-color: #3b82f6;
+}
+.btn-view:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* สีปุ่มส้ม (มอบหมาย/แก้ไข) */
+.btn-edit {
+    background-color: #f59e0b;
+}
+.btn-edit:hover {
+    background-color: #d97706;
+}
+
+/* สีปุ่มแดง (ยกเลิก/ลบ) */
+.btn-cancel, .btn-delete {
+    background-color: #ef4444;
+}
+.btn-cancel:hover, .btn-delete:hover {
+    background-color: #dc2626;
+}

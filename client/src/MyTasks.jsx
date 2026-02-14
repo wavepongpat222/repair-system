@@ -20,7 +20,7 @@ function MyTasks() {
         api.get('/technician-jobs/' + user.user_id)
             .then(res => setJobs(Array.isArray(res.data) ? res.data : []))
             .catch(err => console.log(err));
-    }, []);
+    }, [navigate]);
 
     const handlePrintJobs = () => { window.print(); }
 
@@ -66,7 +66,14 @@ function MyTasks() {
                                 <td>{job.problem_detail}</td>
                                 <td>{job.location}</td>
                                 <td><span className={`status-badge ${job.status === 'done' ? 'status-done' : job.status === 'doing' ? 'status-doing' : 'status-pending'}`}>{job.status === 'done' ? '✅ เสร็จสิ้น' : job.status === 'doing' ? '🛠 กำลังซ่อม' : '⏳ รอรับเรื่อง'}</span></td>
-                                <td style={{textAlign: 'center'}} className="no-print"><button className="btn-sm btn-primary" onClick={() => navigate(`/job/${job.id}`)}>อัปเดตงาน</button></td>
+                                <td style={{textAlign: 'center'}} className="no-print">
+                                    {/* ✅ ปรับเป็นปุ่ม btn-sm และใส่ใน action-group */}
+                                    <div className="action-group">
+                                        <button className="btn-sm btn-view" onClick={() => navigate(`/job/${job.id}`)}>
+                                            🛠️ อัปเดตงาน
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                          {currentJobs.length === 0 && <tr><td colSpan="7" style={{textAlign:'center', padding:'30px', color:'#888'}}>คุณยังไม่มีงานที่รับผิดชอบ</td></tr>}

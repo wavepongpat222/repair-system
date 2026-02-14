@@ -139,8 +139,11 @@ function AdminDashboard() {
                                 </td>
                                 <td style={{color:'#64748b'}}>{u.email}</td>
                                 <td style={{textAlign: 'center'}} className="no-print">
-                                    <button onClick={() => handleEditClick(u)} className="btn-sm" style={{marginRight:'5px', color:'#3b82f6', background:'none', border:'none'}}>✏️</button>
-                                    <button onClick={() => handleDeleteClick(u.user_id)} className="btn-sm" style={{color:'#ef4444', background:'none', border:'none'}}>🗑️</button>
+                                    {/* ✅ ปรับเป็นกลุ่มปุ่มขนาดเล็กเรียงกัน */}
+                                    <div className="action-group">
+                                        <button onClick={() => handleEditClick(u)} className="btn-sm btn-edit">✏️ แก้ไข</button>
+                                        <button onClick={() => handleDeleteClick(u.user_id)} className="btn-sm btn-delete">🗑️ ลบ</button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
